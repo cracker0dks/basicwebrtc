@@ -1,0 +1,45 @@
+<html>
+<head>
+
+  <meta charset="utf-8">
+  <meta name="description" content="LD 2016">
+  <meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1, maximum-scale=1">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta id="theme-color" name="theme-color" content="#ffffff">
+
+  <base target="_blank">
+
+  <title>WebRTC!</title>
+  <link rel="stylesheet" href="main.css">
+
+</head>
+
+<body>
+
+  <div id="container">
+    <h1><a href="" title="WebRTC">WebRTC</a> <span>PeerConnection example</span></h1>
+    <span>My Video</span>
+    <video id="local" autoplay></video>
+    <span>Other peer's video</span>
+    <video id="remote" autoplay></video>
+
+    <div id="errorMsg"></div>
+    <div id="okMsg"></div>
+
+    <div>
+      <button id="call">Create Offer (Call)</button>
+      <button id="hangup">Hang Up</button>
+    </div>
+
+    <div>
+	<textarea id='sdpMessage' name="sdpMessage" type="textarea" value="" cols="80" rows="10"></textarea>
+	<button id="setSdpOffer">Set as Sdp Offer (callee)</button>
+	<button id="setSdpAnswer">Set as Sdp Answer (initiator)</button>
+  </div>
+
+  <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+  <script src="js/main.js"></script>
+</body>
+  
+  
+</html>
