@@ -1,11 +1,11 @@
 //Constants
 var localStream = null;
-var pc = null; 
+var pc = null;
 var offerOptions = {
   offerToReceiveAudio: 1, //Want audio
   offerToReceiveVideo: 1  //Want video
 };
-var constraints = { video: true, audio: true};
+var constraints = { video: true, audio: true };
 
 //HTML Stuff
 var callBtn = document.getElementById('call');
@@ -28,41 +28,41 @@ sdpOfferBtn.onclick = setSdpOffer;
 initPeerConnection();
 
 function initPeerConnection() {
-  navigator.getUserMedia(constraints, 
-     function (stream) { //OnSuccess
-	  localStream = stream;
-	  console.log('getUserMedia success! Stream: ', stream);
-	  console.log('LocalStream', localStream.getVideoTracks());
+  navigator.getUserMedia(constraints,
+    function (stream) { //OnSuccess
+      localStream = stream;
+      console.log('getUserMedia success! Stream: ', stream);
+      console.log('LocalStream', localStream.getVideoTracks());
 
-	  localVideo.srcObject = localStream;
-  	  msgdiv.innerHTML = '<p> L\'utente ha dato il permesso di utilizzare mic e webcam!</p>';
-          var videoTracks = localStream.getVideoTracks();
-          var audioTracks = localStream.getAudioTracks();
-  	  if (videoTracks.length > 0) {
-	     console.log('Using video device: ' + videoTracks[0].label);
-  	  }
-	  if (audioTracks.length > 0) {
-	    console.log('Using audio device: ' + audioTracks[0].label);
-  	  }
-	  var servers = {'iceServers': [{'url': 'stun:stun.l.google.com:19302'}]};
-	  pc = new RTCPeerConnection(servers);
-	  //Setting ICE Callbacks  
-	  pc.onicecandidate = function(e) {
-	    onIceCandidate(pc, e);
-	  };
-	  pc.oniceconnectionstatechange = function(e) {
-	    onIceStateChange(pc, e);
-	  };
+      localVideo.srcObject = localStream;
+      msgdiv.innerHTML = '<p> ABFAHRT!</p>';
+      var videoTracks = localStream.getVideoTracks();
+      var audioTracks = localStream.getAudioTracks();
+      if (videoTracks.length > 0) {
+        console.log('Using video device: ' + videoTracks[0].label);
+      }
+      if (audioTracks.length > 0) {
+        console.log('Using audio device: ' + audioTracks[0].label);
+      }
+      var servers = { 'iceServers': [{ 'url': 'stun:stun.l.google.com:19302' }] };
+      pc = new RTCPeerConnection(servers);
+      //Setting ICE Callbacks  
+      pc.onicecandidate = function (e) {
+        onIceCandidate(pc, e);
+      };
+      pc.oniceconnectionstatechange = function (e) {
+        onIceStateChange(pc, e);
+      };
 
-	  pc.onaddstream = gotRemoteStream; //When the connection is ready call this!
-	
-	  pc.addStream(localStream); //Set Local Stream
-	  console.log('Adding local stream to initiator PC');
-     },
-     function (error) { //OnError
-	  console.log('getUserMedia error! Got this error: ', error);
-	  errordiv.innerHTML = '<p> Errore! ' + error.name + '</p>' ;
-     }
+      pc.onaddstream = gotRemoteStream; //When the connection is ready call this!
+
+      pc.addStream(localStream); //Set Local Stream
+      console.log('Adding local stream to initiator PC');
+    },
+    function (error) { //OnError
+      console.log('getUserMedia error! Got this error: ', error);
+      errordiv.innerHTML = '<p> Errore! ' + error.name + '</p>';
+    }
   );
 }
 
@@ -74,14 +74,14 @@ function call() {
 
   pc.createOffer(offerOptions).then(
     function (desc) { //on success
-       console.log('PC initiator created offer', desc);
-       pc.setLocalDescription(desc).then(
-          function() { },
-          onSetSessionDescriptionError
-       );
-       console.log("SDP offer should be sent to the callee PC");
-   }, 
-   onCreateSessionDescriptionError //On error
+      console.log('PC initiator created offer', desc);
+      pc.setLocalDescription(desc).then(
+        function () { },
+        onSetSessionDescriptionError
+      );
+      console.log("SDP offer should be sent to the callee PC");
+    },
+    onCreateSessionDescriptionError //On error
   );
 }
 
@@ -95,33 +95,33 @@ function hangup() {
 //Callee logic
 function setSdpOffer() {
   console.log('set Sdp offer button clicked');
-  sdpOffer =  new RTCSessionDescription(JSON.parse(SdpText.value));
- 
+  sdpOffer = new RTCSessionDescription(JSON.parse(SdpText.value));
+
   pc.setRemoteDescription(sdpOffer).then(
-    function() { //Success
-   	console.log('Set remote Success. Creating answer');
-	pc.createAnswer().then(
-	   function (desc) {
-	      console.log('Created answer', desc);
-              msgdiv.innerHTML = '<pre>' + desc.sdp + '</pre>'; 
-              pc.setLocalDescription(desc).then(
-		    function() {},
-		    onSetSessionDescriptionError
-	      );
-	   },
-	   onCreateSessionDescriptionError
-	);
+    function () { //Success
+      console.log('Set remote Success. Creating answer');
+      pc.createAnswer().then(
+        function (desc) {
+          console.log('Created answer', desc);
+          msgdiv.innerHTML = '<pre>' + desc.sdp + '</pre>';
+          pc.setLocalDescription(desc).then(
+            function () { },
+            onSetSessionDescriptionError
+          );
+        },
+        onCreateSessionDescriptionError
+      );
     },
     onSetSessionDescriptionError
   );
 }
 
 //Initiator logic
-function setSdpAnswer() { 
+function setSdpAnswer() {
   var sdpAnswer = new RTCSessionDescription(JSON.parse(SdpText.value));
   console.log('set Sdp answer button clicked. Setting answer', sdpAnswer);
   pc.setRemoteDescription(sdpAnswer).then(
-    function() {
+    function () {
       console.log("setRemoteDescription was successful");
     },
     onSetSessionDescriptionError
@@ -133,13 +133,13 @@ function setSdpAnswer() {
 function gotRemoteStream(e) {
   console.log("Got remote stream!", e);
 
-	remoteVideo.srcObject = e.stream;
+  remoteVideo.srcObject = e.stream;
 
 }
 
 //ICE Callbacks
 function onIceCandidate(pc, event) {
-    msgdiv.innerHTML = '<pre>' + JSON.stringify(pc.localDescription) + '</pre>'; 
+  msgdiv.innerHTML = '<pre>' + JSON.stringify(pc.localDescription) + '</pre>';
 }
 
 function onAddIceCandidateSuccess(pc) {
