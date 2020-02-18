@@ -24,7 +24,7 @@ socket.on("connect", function () {
       //STEP 2 (Initiator: SEND the offer 2sec after first candidate)
       setTimeout(function () {
         send_sdp_to_remote_peer()
-      }, 2000)
+      }, 5000)
     };
 
     pc.oniceconnectionstatechange = function (e) {
