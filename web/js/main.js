@@ -14,8 +14,6 @@ var pcs = {}; //Peer connections to all remotes
 
 socket.on("connect", function () {
   console.log("CONNECTED!");
-  var roomname = getUrlParam("roomname", "unknown");
-  socket.emit("joinRoom", roomname);
 
   //STEP 1 (Initiator: getting an offer req)
   socket.on("reqWebRTCOffer", function (reqSocketId) { //Other client wants our offer!
@@ -146,8 +144,13 @@ socket.on("connect", function () {
         if (audioTracks.length > 0) {
           console.log('Using audio device: ' + audioTracks[0].label);
         }
+        
+        //Join the room if local media is active!
+        var roomname = getUrlParam("roomname", "unknown");
+        socket.emit("joinRoom", roomname);
       },
       function (error) { //OnError
+        alert("Could not get your Camera / Mic!")
         console.log('getUserMedia error! Got this error: ', error);
       }
     );
