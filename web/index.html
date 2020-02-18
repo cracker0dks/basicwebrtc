@@ -11,7 +11,7 @@
   <base target="_blank">
 
   <title>WebRTC!</title>
-  <link rel="stylesheet" href="main.css">
+  <link rel="stylesheet" href="/css/main.css">
 
 </head>
 
@@ -20,7 +20,7 @@
   <div id="container">
     <h1><a href="" title="WebRTC">WebRTC</a> <span>PeerConnection example</span></h1>
     <span>My Video</span>
-    <video id="local" autoplay></video>
+    <video id="local" autoplay controls muted></video>
     <span>Other peer's video</span>
     <video id="remote" autoplay></video>
 
@@ -39,6 +39,7 @@
     </div>
 
     <script src="https://webrtc.github.io/adapter/adapter-latest.js"></script>
+    <script src="js/socket.io-2.3.0.js"></script>
     <script src="js/main.js"></script>
 </body>
 
