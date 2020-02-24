@@ -53,6 +53,12 @@ ioServer.sockets.on('connection', function (socket) {
         var sdpAnswer = content.sdpAnswer;
         ioServer.to(reqSocketId).emit('setWebRTCAnswer', { sdpAnswer: sdpAnswer, reqSocketId: socket.id });
     })
+
+    socket.on("sendNewIceCandidate", function (content) {
+        var reqSocketId = content.reqSocketId;
+        var candidate = content.candidate;
+        ioServer.to(reqSocketId).emit('addNewIceCandidate', { candidate: candidate, reqSocketId: socket.id });
+    })
     
 })
 //Listen for IO connections and do signaling

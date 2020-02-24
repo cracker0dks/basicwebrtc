@@ -20,11 +20,13 @@ socket.on("connect", function () {
     var pc = new RTCPeerConnection(servers);
     pcs[reqSocketId] = pc;
 
+    pc.addStream(localStream); //Set Local Stream
+    console.log('Adding local stream to initiator PC');
+
     pc.onicecandidate = function (e) {
-      //STEP 2 (Initiator: SEND the offer 2sec after first candidate)
-      setTimeout(function () {
-        send_sdp_to_remote_peer()
-      }, 5000)
+      if (!pc || !e || !e.candidate) return;
+      console.log("send new ice candidate offer!");
+      socket.emit("sendNewIceCandidate", { reqSocketId: reqSocketId, candidate: e.candidate });
     };
 
     pc.oniceconnectionstatechange = function (e) {
@@ -35,22 +37,9 @@ socket.on("connect", function () {
       }
     };
 
-    var isSdpSent = false;
-    function send_sdp_to_remote_peer() {
-      if (isSdpSent) return;
-      console.log("SEND complete SDP");
-      isSdpSent = true;
-      var desc = pc.localDescription;
-      desc.sdp = filterTrickle(desc.sdp);
-      socket.emit("sendSDPOffertoSocket", { reqSocketId: reqSocketId, sdpOffer: desc });
-    }
-
     pc.onaddstream = function (event) {
       gotRemoteStream(event, reqSocketId);
     };
-
-    pc.addStream(localStream); //Set Local Stream
-    console.log('Adding local stream to initiator PC');
 
     pc.createOffer(offerOptions).then(
       function (desc) { //on success
@@ -59,7 +48,10 @@ socket.on("connect", function () {
           function () { },
           onSetSessionDescriptionError
         );
-        console.log("SDP offer should be sent to the callee PC");
+        //STEP 2 (Initiator: SEND the SDP offer)
+        console.log("Sending SDP offer!");
+        var desc = pc.localDescription;
+        socket.emit("sendSDPOffertoSocket", { reqSocketId: reqSocketId, sdpOffer: desc });
       },
       function (error) {
         console.log('Error setting SDP: ' + error.toString(), error);
@@ -77,7 +69,10 @@ socket.on("connect", function () {
 
     pc.onicecandidate = function (e) {
       //STEP 2 (Initiator: SEND the offer 2sec after first candidate)
-      console.log("ICE 2")
+      if (!pc || !e || !e.candidate) return;
+      console.log("send new ice candidate answer!");
+      socket.emit("sendNewIceCandidate", { reqSocketId: reqSocketId, candidate: e.candidate });
+      
     };
 
     pc.oniceconnectionstatechange = function (e) {
@@ -126,6 +121,16 @@ socket.on("connect", function () {
       },
       onSetSessionDescriptionError
     );
+  });
+
+  socket.on("addNewIceCandidate", function (content) {
+    var candidate = content["candidate"];
+    var reqSocketId = content["reqSocketId"];
+    var pc = pcs[reqSocketId];
+    pc.addIceCandidate(new RTCIceCandidate({
+      sdpMLineIndex: candidate.sdpMLineIndex,
+      candidate: candidate.candidate
+    }));
   });
 
   initLocalMedia();
