@@ -67,11 +67,10 @@ socket.on("connect", function () {
     pcs[reqSocketId] = pc;
 
     pc.onicecandidate = function (e) {
-      //STEP 2 (Initiator: SEND the offer 2sec after first candidate)
       if (!pc || !e || !e.candidate) return;
       console.log("send new ice candidate answer!");
       socket.emit("sendNewIceCandidate", { reqSocketId: reqSocketId, candidate: e.candidate });
-      
+
     };
 
     pc.oniceconnectionstatechange = function (e) {
@@ -131,7 +130,13 @@ socket.on("connect", function () {
     }));
   });
 
-  initLocalMedia();
+  $("#startBtn").click(function() {
+    constraints = { video: $("#mediaSelect").val()==1, audio: true };
+    $("#start").remove();
+    $("#container").show();
+    initLocalMedia();
+  })
+  
 
   function initLocalMedia() {
     navigator.getUserMedia(constraints,
@@ -139,11 +144,19 @@ socket.on("connect", function () {
         localStream = stream;
         console.log('getUserMedia success! Stream: ', stream);
         console.log('LocalStream', localStream.getVideoTracks());
-
-        var localVideo = document.getElementById('local');
-        localVideo.srcObject = localStream;
+        
         var videoTracks = localStream.getVideoTracks();
         var audioTracks = localStream.getAudioTracks();
+
+        var mediaDiv = $('<div><span class="htext">LOCAL</span><video autoplay controls muted></video></div>');
+        mediaDiv.find("video")[0].srcObject = localStream;
+        if(videoTracks.length==0) {
+          mediaDiv = $('<div><span style="position: relative; top: -22px;">LOCAL: </span><audio autoplay controls muted></audio></div>');
+          mediaDiv.find("audio")[0].srcObject = localStream;
+        }
+        
+        $("#localMedia").append(mediaDiv)
+
         if (videoTracks.length > 0) {
           console.log('Using video device: ' + videoTracks[0].label);
         }
@@ -164,11 +177,26 @@ socket.on("connect", function () {
 });
 
 function gotRemoteStream(event, socketId) {
-  var div = $('<div id="' + socketId + '">' +
-    '<video autoplay controls></video>' +
-    '</div>')
-  $("#media").append(div)
-  div.find("video")[0].srcObject = event.stream;
+  var videoTracks = event.stream.getVideoTracks();
+  var audioTracks = event.stream.getAudioTracks();
+  console.log("videoTracks", videoTracks)
+  if(videoTracks.length >= 1 && audioTracks.length >= 1) {
+    var div = $('<div" id="' + socketId + '"><span class="htext">REMOTE</span>' +
+      '<video autoplay controls></video>' +
+      '</div>')
+    $("#remoteMedia").append(div)
+
+
+    div.find("video")[0].srcObject = event.stream;
+  } else {
+    var div = $('<div" id="' + socketId + '"><span style="position: relative; top: -22px;">REMOTE: </span>' +
+      '<audio autoplay controls></audio>' +
+      '</div>')
+    $("#remoteMedia").append(div)
+
+    div.find("video")[0].srcObject = event.stream;
+  }
+
 };
 
 //Error
