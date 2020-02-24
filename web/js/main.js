@@ -8,7 +8,37 @@ var offerOptions = {
   offerToReceiveVideo: 1  //Want video
 };
 var constraints = { video: true, audio: true };
-var servers = { 'iceServers': [{ 'url': 'stun:stun.l.google.com:19302' }] };
+var servers = {
+  'iceServers': [
+    { 'url': 'stun:stun.l.google.com:19302' },
+    { 'url': 'stun:stun3.l.google.com:19302' },
+    {
+      url: 'turn:numb.viagenie.ca',
+      credential: 'muazkh',
+      username: 'webrtc@live.com'
+    },
+    {
+      url: 'turn:192.158.29.39:3478?transport=udp',
+      credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
+      username: '28224511:1379330808'
+    },
+    {
+      url: 'turn:192.158.29.39:3478?transport=tcp',
+      credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
+      username: '28224511:1379330808'
+    },
+    {
+      url: 'turn:turn.bistri.com:80',
+      credential: 'homeo',
+      username: 'homeo'
+    },
+    {
+      url: 'turn:turn.anyfirewall.com:443?transport=tcp',
+      credential: 'webrtc',
+      username: 'webrtc'
+    }
+  ]
+};
 
 var pcs = {}; //Peer connections to all remotes
 
@@ -130,13 +160,13 @@ socket.on("connect", function () {
     }));
   });
 
-  $("#startBtn").click(function() {
-    constraints = { video: $("#mediaSelect").val()==1, audio: true };
+  $("#startBtn").click(function () {
+    constraints = { video: $("#mediaSelect").val() == 1, audio: true };
     $("#start").remove();
     $("#container").show();
     initLocalMedia();
   })
-  
+
 
   function initLocalMedia() {
     navigator.getUserMedia(constraints,
@@ -144,17 +174,17 @@ socket.on("connect", function () {
         localStream = stream;
         console.log('getUserMedia success! Stream: ', stream);
         console.log('LocalStream', localStream.getVideoTracks());
-        
+
         var videoTracks = localStream.getVideoTracks();
         var audioTracks = localStream.getAudioTracks();
 
         var mediaDiv = $('<div><span class="htext">LOCAL</span><video autoplay controls muted></video></div>');
         mediaDiv.find("video")[0].srcObject = localStream;
-        if(videoTracks.length==0) {
+        if (videoTracks.length == 0) {
           mediaDiv = $('<div style="padding-top:10px;"><span style="position: relative; top: -22px;">LOCAL: </span><audio autoplay controls muted></audio></div>');
           mediaDiv.find("audio")[0].srcObject = localStream;
         }
-        
+
         $("#localMedia").append(mediaDiv)
 
         if (videoTracks.length > 0) {
@@ -180,7 +210,7 @@ function gotRemoteStream(event, socketId) {
   var videoTracks = event.stream.getVideoTracks();
   var audioTracks = event.stream.getAudioTracks();
   console.log("videoTracks", videoTracks)
-  if(videoTracks.length >= 1 && audioTracks.length >= 1) {
+  if (videoTracks.length >= 1 && audioTracks.length >= 1) {
     var div = $('<div" id="' + socketId + '"><span class="htext">REMOTE</span>' +
       '<video autoplay controls></video>' +
       '</div>')
