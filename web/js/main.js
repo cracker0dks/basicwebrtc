@@ -50,7 +50,6 @@ socket.on("connect", function () {
         );
         //STEP 2 (Initiator: SEND the SDP offer)
         console.log("Sending SDP offer!");
-        var desc = pc.localDescription;
         socket.emit("sendSDPOffertoSocket", { reqSocketId: reqSocketId, sdpOffer: desc });
       },
       function (error) {
@@ -87,14 +86,13 @@ socket.on("connect", function () {
       gotRemoteStream(event, reqSocketId);
     };
     pc.addStream(localStream); //add local stream to peer
-
+    console.log("ADD OFFFER", sdpOffer)
     pc.setRemoteDescription(new RTCSessionDescription(sdpOffer)).then(function () { //Success
       console.log('Set remote Success. Creating answer');
       setTimeout(function () {
         pc.createAnswer().then(function (desc) {
           console.log('Created answer', desc);
           //STEP 4 (Callee: Send Answer)
-          desc.sdp = filterTrickle(desc.sdp);
           socket.emit("sendSDPAnswertoSocket", { reqSocketId: reqSocketId, sdpAnswer: desc });
           pc.setLocalDescription(desc).then(
             function () { },
@@ -176,12 +174,6 @@ function gotRemoteStream(event, socketId) {
 //Error
 function onSetSessionDescriptionError(error) {
   console.log("Set session desc. error!", error);
-}
-
-
-//HELPERS
-function filterTrickle(sdp) {
-  return sdp.replace(/a=ice-options:trickle\s\n/g, '')
 }
 
 function getUrlParam(parameter, defaultvalue) {
