@@ -151,7 +151,7 @@ socket.on("connect", function () {
         var mediaDiv = $('<div><span class="htext">LOCAL</span><video autoplay controls muted></video></div>');
         mediaDiv.find("video")[0].srcObject = localStream;
         if(videoTracks.length==0) {
-          mediaDiv = $('<div><span style="position: relative; top: -22px;">LOCAL: </span><audio autoplay controls muted></audio></div>');
+          mediaDiv = $('<div style="padding-top:10px;"><span style="position: relative; top: -22px;">LOCAL: </span><audio autoplay controls muted></audio></div>');
           mediaDiv.find("audio")[0].srcObject = localStream;
         }
         
@@ -189,12 +189,12 @@ function gotRemoteStream(event, socketId) {
 
     div.find("video")[0].srcObject = event.stream;
   } else {
-    var div = $('<div" id="' + socketId + '"><span style="position: relative; top: -22px;">REMOTE: </span>' +
+    var div = $('<div style="padding-top:10px;" id="' + socketId + '"><span style="position: relative; top: -22px;">REMOTE: </span>' +
       '<audio autoplay controls></audio>' +
       '</div>')
     $("#remoteMedia").append(div)
 
-    div.find("video")[0].srcObject = event.stream;
+    div.find("audio")[0].srcObject = event.stream;
   }
 
 };
