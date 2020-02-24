@@ -8,36 +8,8 @@ var offerOptions = {
   offerToReceiveVideo: 1  //Want video
 };
 var constraints = { video: true, audio: true };
-var servers = {
-  'iceServers': [
-    { 'url': 'stun:stun.l.google.com:19302' },
-    { 'url': 'stun:stun3.l.google.com:19302' },
-    {
-      url: 'turn:numb.viagenie.ca',
-      credential: 'muazkh',
-      username: 'webrtc@live.com'
-    },
-    {
-      url: 'turn:192.158.29.39:3478?transport=udp',
-      credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
-      username: '28224511:1379330808'
-    },
-    {
-      url: 'turn:192.158.29.39:3478?transport=tcp',
-      credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
-      username: '28224511:1379330808'
-    },
-    {
-      url: 'turn:turn.bistri.com:80',
-      credential: 'homeo',
-      username: 'homeo'
-    },
-    {
-      url: 'turn:turn.anyfirewall.com:443?transport=tcp',
-      credential: 'webrtc',
-      username: 'webrtc'
-    }
-  ]
+var iceServers = {
+  'iceServers' : []
 };
 
 var pcs = {}; //Peer connections to all remotes
@@ -47,7 +19,7 @@ socket.on("connect", function () {
 
   //STEP 1 (Initiator: getting an offer req)
   socket.on("reqWebRTCOffer", function (reqSocketId) { //Other client wants our offer!
-    var pc = new RTCPeerConnection(servers);
+    var pc = new RTCPeerConnection(iceServers);
     pcs[reqSocketId] = pc;
 
     pc.addStream(localStream); //Set Local Stream
@@ -93,7 +65,7 @@ socket.on("connect", function () {
     var sdpOffer = content["sdpOffer"];
     var reqSocketId = content["reqSocketId"];
 
-    var pc = new RTCPeerConnection(servers);
+    var pc = new RTCPeerConnection(iceServers);
     pcs[reqSocketId] = pc;
 
     pc.onicecandidate = function (e) {
@@ -196,7 +168,10 @@ socket.on("connect", function () {
 
         //Join the room if local media is active!
         var roomname = getUrlParam("roomname", "unknown");
-        socket.emit("joinRoom", roomname);
+        socket.emit("joinRoom", roomname, function(newIceServers) {
+          iceServers["iceServers"] = newIceServers;
+          console.log("got newIceServers", newIceServers)
+        });
       },
       function (error) { //OnError
         alert("Could not get your Camera / Mic!")

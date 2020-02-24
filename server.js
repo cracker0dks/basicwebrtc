@@ -15,7 +15,8 @@ var certificate = fs.readFileSync('./cert/cert.pem');
 //Require modules
 var https = require('https');
 var express = require('express');
-var io = require('socket.io')
+var io = require('socket.io');
+var crypto = require('crypto');
 
 //SpinUP Webserver with socketIO
 var app = express();
@@ -26,9 +27,15 @@ var server = https.createServer({
     cert: certificate
 }, app).listen(HTTPS_PORT);
 
-var ioServer = io.listen(server);
-console.log("SIGNALINGSERVER RUNNING ON PORT: " + HTTPS_PORT);
+var icesevers = JSON.parse(fs.readFileSync("./iceservers.json", 'utf8'));
 
+
+var ioServer = io.listen(server);
+console.log("--------------------------------------------");
+console.log("SIGNALINGSERVER RUNNING ON PORT: " + HTTPS_PORT);
+console.log("--------------------------------------------");
+
+//Listen for IO connections and do signaling
 ioServer.sockets.on('connection', function (socket) {
     console.log("NEW USER!");
 
@@ -36,7 +43,21 @@ ioServer.sockets.on('connection', function (socket) {
         console.log("USER GONE!");
     })
 
-    socket.on("joinRoom", function (roomname) {
+    socket.on("joinRoom", function (roomname, callback) {
+        var returnIce = [];
+        for (var i in icesevers) {
+            if (icesevers[i].turnServerCredential) { //Generate a temp user and password with this turn server creds if given
+                var turnCredentials = getTURNCredentials(icesevers[i].username, icesevers[i].turnServerCredential);
+                returnIce.push({
+                    url: icesevers[i].url,
+                    credential: turnCredentials.password,
+                    username: turnCredentials.username,
+                });
+            } else {
+                returnIce.push(icesevers[i]);
+            }
+        }
+        callback(returnIce)
         console.log("joinRoom", roomname)
         socket.join(roomname);
         socket.to(roomname).emit("reqWebRTCOffer", socket.id); //Ask anyone in the room to initiate a connection
@@ -59,7 +80,20 @@ ioServer.sockets.on('connection', function (socket) {
         var candidate = content.candidate;
         ioServer.to(reqSocketId).emit('addNewIceCandidate', { candidate: candidate, reqSocketId: socket.id });
     })
-    
-})
-//Listen for IO connections and do signaling
 
+})
+
+function getTURNCredentials(name, secret) {
+    var unixTimeStamp = parseInt((Date.now() / 1000) + "") + 12 * 3600,   // this credential would be valid for the next 12 hours
+        username = [unixTimeStamp, name].join(':'),
+        password,
+        hmac = crypto.createHmac('sha1', secret);
+    hmac.setEncoding('base64');
+    hmac.write(username);
+    hmac.end();
+    password = hmac.read();
+    return {
+        username: username,
+        password: password
+    };
+}
