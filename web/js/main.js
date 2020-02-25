@@ -9,7 +9,7 @@ var offerOptions = {
 };
 var constraints = { video: true, audio: true };
 var iceServers = {
-  'iceServers' : []
+  'iceServers': []
 };
 
 var pcs = {}; //Peer connections to all remotes
@@ -43,6 +43,7 @@ socket.on("connect", function () {
       gotRemoteStream(event, reqSocketId);
     };
 
+    //Create offer
     pc.createOffer(offerOptions).then(
       function (desc) { //on success
         console.log('PC initiator created offer', desc);
@@ -90,19 +91,18 @@ socket.on("connect", function () {
     console.log("ADD OFFFER", sdpOffer)
     pc.setRemoteDescription(new RTCSessionDescription(sdpOffer)).then(function () { //Success
       console.log('Set remote Success. Creating answer');
-      setTimeout(function () {
-        pc.createAnswer().then(function (desc) {
-          console.log('Created answer', desc);
-          //STEP 4 (Callee: Send Answer)
-          socket.emit("sendSDPAnswertoSocket", { reqSocketId: reqSocketId, sdpAnswer: desc });
-          pc.setLocalDescription(desc).then(
-            function () { },
-            onSetSessionDescriptionError
-          );
-        }, function (error) {
-          console.log('Error setting SDP: ' + error.toString(), error);
-        });
-      }, 3000)
+
+      pc.createAnswer().then(function (desc) {
+        console.log('Created answer', desc);
+        //STEP 4 (Callee: Send Answer)
+        socket.emit("sendSDPAnswertoSocket", { reqSocketId: reqSocketId, sdpAnswer: desc });
+        pc.setLocalDescription(desc).then(
+          function () { },
+          onSetSessionDescriptionError
+        );
+      }, function (error) {
+        console.log('Error setting SDP: ' + error.toString(), error);
+      });
 
     }, onSetSessionDescriptionError);
   })
@@ -168,7 +168,7 @@ socket.on("connect", function () {
 
         //Join the room if local media is active!
         var roomname = getUrlParam("roomname", "unknown");
-        socket.emit("joinRoom", roomname, function(newIceServers) {
+        socket.emit("joinRoom", roomname, function (newIceServers) {
           iceServers["iceServers"] = newIceServers;
           console.log("got newIceServers", newIceServers)
         });
