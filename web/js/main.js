@@ -22,11 +22,19 @@ socket.on("connect", function () {
     var pc = new RTCPeerConnection(iceServers);
     pcs[reqSocketId] = pc;
 
-    pc.addStream(localStream); //Set Local Stream
+    pc.onnegotiationneeded = async function () {
+      //Create offer
+      console.log('PC initiator created offer!');
+      await pc.setLocalDescription(await pc.createOffer(offerOptions))
+      //STEP 2 (Initiator: SEND the SDP offer)
+      console.log("Sending SDP offer!");
+      socket.emit("sendSDPOffertoSocket", { reqSocketId: reqSocketId, sdpOffer: pc.localDescription });
+    }
+
     console.log('Adding local stream to initiator PC');
+    pc.addStream(localStream); //Set Local Stream
 
     pc.onicecandidate = function (e) {
-      if (!pc || !e || !e.candidate) return;
       console.log("send new ice candidate offer!");
       socket.emit("sendNewIceCandidate", { reqSocketId: reqSocketId, candidate: e.candidate });
     };
@@ -42,13 +50,6 @@ socket.on("connect", function () {
     pc.onaddstream = function (event) {
       gotRemoteStream(event, reqSocketId);
     };
-
-    //Create offer
-    console.log('PC initiator created offer!');
-    await pc.setLocalDescription(await pc.createOffer(offerOptions))
-    //STEP 2 (Initiator: SEND the SDP offer)
-    console.log("Sending SDP offer!");
-    socket.emit("sendSDPOffertoSocket", { reqSocketId: reqSocketId, sdpOffer: pc.localDescription });
   });
 
   //STEP 3 (Callee: Get Offer and Create Answer)
@@ -168,7 +169,7 @@ function gotRemoteStream(event, socketId) {
   var videoTracks = event.stream.getVideoTracks();
   var audioTracks = event.stream.getAudioTracks();
   console.log("videoTracks", videoTracks)
-  $("#"+socketId).remove();
+  $("#" + socketId).remove();
   if (videoTracks.length >= 1 && audioTracks.length >= 1) {
     var div = $('<div" id="' + socketId + '"><span class="htext">REMOTE</span>' +
       '<video autoplay controls></video>' +
