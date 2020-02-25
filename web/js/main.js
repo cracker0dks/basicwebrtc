@@ -150,12 +150,7 @@ socket.on("connect", function () {
           console.log('Using audio device: ' + audioTracks[0].label);
         }
 
-        //Join the room if local media is active!
-        var roomname = getUrlParam("roomname", "unknown");
-        socket.emit("joinRoom", roomname, function (newIceServers) {
-          iceServers["iceServers"] = newIceServers;
-          console.log("got newIceServers", newIceServers)
-        });
+        joinRoom();
       },
       function (error) { //OnError
         alert("Could not get your Camera / Mic!")
@@ -164,6 +159,19 @@ socket.on("connect", function () {
     );
   }
 });
+
+if(localStream) {
+  joinRoom();
+}
+
+function joinRoom() {
+  //Only join the room if local media is active!
+  var roomname = getUrlParam("roomname", "unknown");
+  socket.emit("joinRoom", roomname, function (newIceServers) {
+    iceServers["iceServers"] = newIceServers;
+    console.log("got newIceServers", newIceServers)
+  });
+}
 
 function gotRemoteStream(event, socketId) {
   var videoTracks = event.stream.getVideoTracks();
