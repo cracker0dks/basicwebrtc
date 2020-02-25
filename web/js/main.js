@@ -18,7 +18,7 @@ socket.on("connect", function () {
   console.log("CONNECTED!");
 
   //STEP 1 (Initiator: getting an offer req)
-  socket.on("reqWebRTCOffer", function (reqSocketId) { //Other client wants our offer!
+  socket.on("reqWebRTCOffer", async function (reqSocketId) { //Other client wants our offer!
     var pc = new RTCPeerConnection(iceServers);
     pcs[reqSocketId] = pc;
 
@@ -44,25 +44,15 @@ socket.on("connect", function () {
     };
 
     //Create offer
-    pc.createOffer(offerOptions).then(
-      function (desc) { //on success
-        console.log('PC initiator created offer', desc);
-        pc.setLocalDescription(desc).then(
-          function () { },
-          onSetSessionDescriptionError
-        );
-        //STEP 2 (Initiator: SEND the SDP offer)
-        console.log("Sending SDP offer!");
-        socket.emit("sendSDPOffertoSocket", { reqSocketId: reqSocketId, sdpOffer: desc });
-      },
-      function (error) {
-        console.log('Error setting SDP: ' + error.toString(), error);
-      }
-    );
+    console.log('PC initiator created offer!');
+    await pc.setLocalDescription(await pc.createOffer(offerOptions))
+    //STEP 2 (Initiator: SEND the SDP offer)
+    console.log("Sending SDP offer!");
+    socket.emit("sendSDPOffertoSocket", { reqSocketId: reqSocketId, sdpOffer: pc.localDescription });
   });
 
   //STEP 3 (Callee: Get Offer and Create Answer)
-  socket.on("reqWebRTCAnswer", function (content) {
+  socket.on("reqWebRTCAnswer", async function (content) {
     var sdpOffer = content["sdpOffer"];
     var reqSocketId = content["reqSocketId"];
 
@@ -73,7 +63,6 @@ socket.on("connect", function () {
       if (!pc || !e || !e.candidate) return;
       console.log("send new ice candidate answer!");
       socket.emit("sendNewIceCandidate", { reqSocketId: reqSocketId, candidate: e.candidate });
-
     };
 
     pc.oniceconnectionstatechange = function (e) {
@@ -87,25 +76,25 @@ socket.on("connect", function () {
     pc.onaddstream = function (event) {
       gotRemoteStream(event, reqSocketId);
     };
+
     pc.addStream(localStream); //add local stream to peer
-    console.log("ADD OFFFER", sdpOffer)
-    pc.setRemoteDescription(new RTCSessionDescription(sdpOffer)).then(function () { //Success
-      console.log('Set remote Success. Creating answer');
 
-      pc.createAnswer().then(function (desc) {
-        console.log('Created answer', desc);
-        //STEP 4 (Callee: Send Answer)
-        socket.emit("sendSDPAnswertoSocket", { reqSocketId: reqSocketId, sdpAnswer: desc });
-        pc.setLocalDescription(desc).then(
-          function () { },
-          onSetSessionDescriptionError
-        );
-      }, function (error) {
-        console.log('Error setting SDP: ' + error.toString(), error);
-      });
+    //STEP 4 (Callee: Create and send Answer)
+    console.log('Set remote Success. Creating answer');
+    if (pc.signalingState != "stable") { //If not stable ask for renegotiation
+      await Promise.all([
+        pc.setLocalDescription({ type: "rollback" }), //Be polite
+        await pc.setRemoteDescription(new RTCSessionDescription(sdpOffer))
+      ]);
+    } else {
+      await pc.setRemoteDescription(new RTCSessionDescription(sdpOffer))
+    }
 
-    }, onSetSessionDescriptionError);
+    await pc.setLocalDescription(await pc.createAnswer());
+    console.log('Created answer!');
+    socket.emit("sendSDPAnswertoSocket", { reqSocketId: reqSocketId, sdpAnswer: pc.localDescription });
   })
+
 
   //STEP 5 (Initiator: Setting answer and starting connection)
   socket.on("setWebRTCAnswer", function (content) {
@@ -114,12 +103,7 @@ socket.on("connect", function () {
     var pc = pcs[reqSocketId];
 
     console.log('set Sdp setting answer', sdpAnswer);
-    pc.setRemoteDescription(new RTCSessionDescription(sdpAnswer)).then(
-      function () {
-        console.log("setRemoteDescription was successful");
-      },
-      onSetSessionDescriptionError
-    );
+    pc.setRemoteDescription(new RTCSessionDescription(sdpAnswer))
   });
 
   socket.on("addNewIceCandidate", function (content) {
@@ -138,7 +122,6 @@ socket.on("connect", function () {
     $("#container").show();
     initLocalMedia();
   })
-
 
   function initLocalMedia() {
     navigator.getUserMedia(constraints,
@@ -185,6 +168,7 @@ function gotRemoteStream(event, socketId) {
   var videoTracks = event.stream.getVideoTracks();
   var audioTracks = event.stream.getAudioTracks();
   console.log("videoTracks", videoTracks)
+  $("#"+socketId).remove();
   if (videoTracks.length >= 1 && audioTracks.length >= 1) {
     var div = $('<div" id="' + socketId + '"><span class="htext">REMOTE</span>' +
       '<video autoplay controls></video>' +
@@ -201,13 +185,7 @@ function gotRemoteStream(event, socketId) {
 
     div.find("audio")[0].srcObject = event.stream;
   }
-
 };
-
-//Error
-function onSetSessionDescriptionError(error) {
-  console.log("Set session desc. error!", error);
-}
 
 function getUrlParam(parameter, defaultvalue) {
   var urlparameter = defaultvalue;
