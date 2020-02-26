@@ -96,7 +96,6 @@ socket.on("connect", function () {
     socket.emit("sendSDPAnswertoSocket", { reqSocketId: reqSocketId, sdpAnswer: pc.localDescription });
   })
 
-
   //STEP 5 (Initiator: Setting answer and starting connection)
   socket.on("setWebRTCAnswer", function (content) {
     var sdpAnswer = content["sdpAnswer"];
@@ -118,7 +117,7 @@ socket.on("connect", function () {
   });
 
   $("#startBtn").click(function () {
-    constraints = { video: $("#mediaSelect").val() == 1, audio: {'echoCancellation': true} };
+    constraints = { video: $("#mediaSelect").val() == 1, audio: { 'echoCancellation': true, 'noiseSuppression': true } };
     $("#start").remove();
     $("#container").show();
     initLocalMedia();
@@ -160,7 +159,7 @@ socket.on("connect", function () {
   }
 });
 
-if(localStream) {
+if (localStream) {
   joinRoom();
 }
 
@@ -179,7 +178,7 @@ function gotRemoteStream(event, socketId) {
 
   console.log("videoTracks", videoTracks)
   console.log("audioTracks", audioTracks)
-  
+
   $("#" + socketId).remove();
   if (videoTracks.length >= 1 && audioTracks.length >= 1) {
     var div = $('<div" id="' + socketId + '"><span class="htext">REMOTE</span>' +
