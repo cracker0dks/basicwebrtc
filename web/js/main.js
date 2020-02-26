@@ -117,7 +117,11 @@ socket.on("connect", function () {
   });
 
   $("#startBtn").click(function () {
-    constraints = { video: $("#mediaSelect").val() == 1, audio: { 'echoCancellation': true, 'noiseSuppression': true } };
+    var videoConstraints = $("#mediaSelect").val() == 1 ? { 'facingMode': "user" } : false;
+    constraints = {
+      video: videoConstraints,
+      audio: { 'echoCancellation': true, 'noiseSuppression': true }
+    };
     $("#start").remove();
     $("#container").show();
     initLocalMedia();
