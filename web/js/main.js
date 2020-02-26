@@ -118,7 +118,7 @@ socket.on("connect", function () {
   });
 
   $("#startBtn").click(function () {
-    constraints = { video: $("#mediaSelect").val() == 1, audio: true };
+    constraints = { video: $("#mediaSelect").val() == 1, audio: {'echoCancellation': true} };
     $("#start").remove();
     $("#container").show();
     initLocalMedia();
@@ -176,7 +176,10 @@ function joinRoom() {
 function gotRemoteStream(event, socketId) {
   var videoTracks = event.stream.getVideoTracks();
   var audioTracks = event.stream.getAudioTracks();
+
   console.log("videoTracks", videoTracks)
+  console.log("audioTracks", audioTracks)
+  
   $("#" + socketId).remove();
   if (videoTracks.length >= 1 && audioTracks.length >= 1) {
     var div = $('<div" id="' + socketId + '"><span class="htext">REMOTE</span>' +
