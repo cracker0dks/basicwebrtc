@@ -137,7 +137,7 @@ socket.on("connect", function () {
         var videoTracks = localStream.getVideoTracks();
         var audioTracks = localStream.getAudioTracks();
 
-        var mediaDiv = $('<div><span class="htext">LOCAL</span><video autoplay controls muted></video></div>');
+        var mediaDiv = $('<div><span class="htext">LOCAL</span><video style="transform: scaleX(-1);" autoplay muted></video></div>');
         mediaDiv.find("video")[0].srcObject = localStream;
         if (videoTracks.length == 0) {
           mediaDiv = $('<div style="padding-top:10px;"><span style="position: relative; top: -22px;">LOCAL: </span><audio autoplay controls muted></audio></div>');
