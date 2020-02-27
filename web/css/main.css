@@ -18,6 +18,7 @@ div#container {
 video {
   background: #222;
   width: 100%;
+  transform: scaleX(-1);
 }
 
 .htext {
