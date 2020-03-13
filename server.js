@@ -60,27 +60,19 @@ ioServer.sockets.on('connection', function (socket) {
         callback(returnIce)
         console.log("joinRoom", roomname)
         socket.join(roomname);
-        socket.to(roomname).emit("reqWebRTCOffer", socket.id); //Ask anyone in the room to initiate a connection
     })
 
-    socket.on("sendSDPOffertoSocket", function (content) {
+    socket.on("signaling", function (content) {
         var reqSocketId = content.reqSocketId;
-        var sdpOffer = content.sdpOffer;
-        ioServer.to(reqSocketId).emit('reqWebRTCAnswer', { sdpOffer: sdpOffer, reqSocketId: socket.id });
-    })
-
-    socket.on("sendSDPAnswertoSocket", function (content) {
-        var reqSocketId = content.reqSocketId;
-        var sdpAnswer = content.sdpAnswer;
-        ioServer.to(reqSocketId).emit('setWebRTCAnswer', { sdpAnswer: sdpAnswer, reqSocketId: socket.id });
-    })
-
-    socket.on("sendNewIceCandidate", function (content) {
-        var reqSocketId = content.reqSocketId;
-        var candidate = content.candidate;
-        ioServer.to(reqSocketId).emit('addNewIceCandidate', { candidate: candidate, reqSocketId: socket.id });
-    })
-
+        var data = content.data;
+        
+        if(content.type == "start") { //Send start to room
+            console.log("START YO")
+            socket.to(content.roomname).emit('signaling', { type : "start", reqSocketId: socket.id });
+        } else {
+            ioServer.to(reqSocketId).emit('signaling', { data : data, reqSocketId: socket.id });
+        }
+    });
 })
 
 function getTURNCredentials(name, secret) {

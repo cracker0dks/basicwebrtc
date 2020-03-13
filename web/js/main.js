@@ -17,104 +17,106 @@ var pcs = {}; //Peer connections to all remotes
 socket.on("connect", function () {
   console.log("CONNECTED!");
 
-  //STEP 1 (Initiator: getting an offer req)
-  socket.on("reqWebRTCOffer", async function (reqSocketId) { //Other client wants our offer!
-    var pc = new RTCPeerConnection(iceServers);
-    pcs[reqSocketId] = pc;
+  function startWebRTC() {
+    var roomname = getUrlParam("roomname", "unknown");
+    socket.emit("signaling", { roomname: roomname, type: "start" }); //Request offers from other partys
+  }
 
-    pc.onnegotiationneeded = async function () {
-      //Create offer
-      console.log('PC initiator created offer!');
-      await pc.setLocalDescription(await pc.createOffer(offerOptions))
-      //STEP 2 (Initiator: SEND the SDP offer)
-      console.log("Sending SDP offer!");
-      socket.emit("sendSDPOffertoSocket", { reqSocketId: reqSocketId, sdpOffer: pc.localDescription });
-    }
+  socket.on("signaling", async function (content) {
+    var signalData = content ? content.data : {};
+    var reqSocketId = content.reqSocketId;
+    
+    console.log("signaling", content)
 
-    console.log('Adding local stream to initiator PC');
-    pc.addStream(localStream); //Set Local Stream
+    if (content.type == "start") { //STEP 1 (Initiator: getting an offer req)
+      var pc = new RTCPeerConnection(iceServers);
 
-    pc.onicecandidate = function (e) {
-      console.log("send new ice candidate offer!");
-      socket.emit("sendNewIceCandidate", { reqSocketId: reqSocketId, candidate: e.candidate });
-    };
+      console.log('Adding local stream to initiator PC');
+      pc.addStream(localStream); //Set Local Stream
 
-    pc.oniceconnectionstatechange = function (e) {
-      console.log('ICE state: ' + pc.iceConnectionState);
-      if (pc.iceConnectionState == 'disconnected') {
-        $("#" + reqSocketId).remove();
-        console.log("ICE state: ", pc.iceConnectionState)
+      pcs[reqSocketId] = pc;
+
+      pc.onnegotiationneeded = async function () {
+        //Create offer
+        console.log('PC initiator created offer!');
+        await pc.setLocalDescription(await pc.createOffer(offerOptions))
+        //STEP 2 (Initiator: SEND the SDP offer)
+        console.log("Sending SDP offer!");
+        socket.emit("signaling", { reqSocketId: reqSocketId, data: pc.localDescription });
       }
-    };
 
-    pc.onaddstream = function (event) {
-      gotRemoteStream(event, reqSocketId);
-    };
-  });
+      pc.onicecandidate = function (e) {
+        console.log("send ice candidate offer!", e);
+        socket.emit("signaling", { reqSocketId: reqSocketId, data: e.candidate });
+      };
 
-  //STEP 3 (Callee: Get Offer and Create Answer)
-  socket.on("reqWebRTCAnswer", async function (content) {
-    var sdpOffer = content["sdpOffer"];
-    var reqSocketId = content["reqSocketId"];
+      pc.oniceconnectionstatechange = function (e) {
+        console.log('ICE state: ' + pc.iceConnectionState);
+        if (pc.iceConnectionState == 'disconnected') {
+          $("#" + reqSocketId).remove();
+          console.log("ICE state: ", pc.iceConnectionState)
+        }
+      };
 
-    var pc = new RTCPeerConnection(iceServers);
-    pcs[reqSocketId] = pc;
+      pc.onaddstream = function (event) {
+        gotRemoteStream(event, reqSocketId);
+      };
 
-    pc.onicecandidate = function (e) {
-      if (!pc || !e || !e.candidate) return;
-      console.log("send new ice candidate answer!");
-      socket.emit("sendNewIceCandidate", { reqSocketId: reqSocketId, candidate: e.candidate });
-    };
+    } else if (signalData && signalData.type == "offer") { //STEP 3 (Callee: Get Offer and Create Answer)
+      if (!pcs[reqSocketId]) {
+        var pc = new RTCPeerConnection(iceServers);
+        pc.addStream(localStream); //add local stream to peer
 
-    pc.oniceconnectionstatechange = function (e) {
-      console.log('ICE state: ' + pc.iceConnectionState);
-      if (pc.iceConnectionState == 'disconnected') {
-        $("#" + reqSocketId).remove();
-        console.log("ICE state: ", pc.iceConnectionState)
+        pcs[reqSocketId] = pc;
+
+        pc.onicecandidate = function (e) {
+          if (!pc || !e || !e.candidate) return;
+          console.log("send new ice candidate answer!");
+          socket.emit("signaling", { reqSocketId: reqSocketId, data: e.candidate });
+        };
+
+        pc.oniceconnectionstatechange = function (e) {
+          console.log('ICE state: ' + pc.iceConnectionState);
+          if (pc.iceConnectionState == 'disconnected') {
+            $("#" + reqSocketId).remove();
+            console.log("ICE state: ", pc.iceConnectionState)
+          }
+        };
+
+        pc.onaddstream = function (event) {
+          gotRemoteStream(event, reqSocketId);
+        };
+
+        //STEP 4 (Callee: Create and send Answer)
+        console.log('Set remote Success. Creating answer');
+        if (pc.signalingState != "stable") { //If not stable ask for renegotiation
+          await Promise.all([
+            pc.setLocalDescription({ type: "rollback" }), //Be polite
+            await pc.setRemoteDescription(new RTCSessionDescription(signalData))
+          ]);
+        } else {
+          await pc.setRemoteDescription(new RTCSessionDescription(signalData))
+        }
+
+        await pc.setLocalDescription(await pc.createAnswer());
+        console.log('Created answer!');
+        socket.emit("signaling", { reqSocketId: reqSocketId, data: pc.localDescription });
+      } else {
+        await pc.setRemoteDescription(new RTCSessionDescription(signalData))
       }
-    };
-
-    pc.onaddstream = function (event) {
-      gotRemoteStream(event, reqSocketId);
-    };
-
-    pc.addStream(localStream); //add local stream to peer
-
-    //STEP 4 (Callee: Create and send Answer)
-    console.log('Set remote Success. Creating answer');
-    if (pc.signalingState != "stable") { //If not stable ask for renegotiation
-      await Promise.all([
-        pc.setLocalDescription({ type: "rollback" }), //Be polite
-        await pc.setRemoteDescription(new RTCSessionDescription(sdpOffer))
-      ]);
-    } else {
-      await pc.setRemoteDescription(new RTCSessionDescription(sdpOffer))
+    } else if (signalData && signalData.type == "answer") { //STEP 5 (Initiator: Setting answer and starting connection)
+      var pc = pcs[reqSocketId];
+      console.log('set Sdp setting answer', signalData);
+      pc.setRemoteDescription(new RTCSessionDescription(signalData))
+    } else if(signalData && signalData.candidate){ //is a icecandidate thing
+      var candidate = signalData;
+      var pc = pcs[reqSocketId];
+      pc.addIceCandidate(new RTCIceCandidate({
+        sdpMLineIndex: candidate.sdpMLineIndex,
+        candidate: candidate.candidate
+      }));
     }
-
-    await pc.setLocalDescription(await pc.createAnswer());
-    console.log('Created answer!');
-    socket.emit("sendSDPAnswertoSocket", { reqSocketId: reqSocketId, sdpAnswer: pc.localDescription });
   })
-
-  //STEP 5 (Initiator: Setting answer and starting connection)
-  socket.on("setWebRTCAnswer", function (content) {
-    var sdpAnswer = content["sdpAnswer"];
-    var reqSocketId = content["reqSocketId"];
-    var pc = pcs[reqSocketId];
-
-    console.log('set Sdp setting answer', sdpAnswer);
-    pc.setRemoteDescription(new RTCSessionDescription(sdpAnswer))
-  });
-
-  socket.on("addNewIceCandidate", function (content) {
-    var candidate = content["candidate"];
-    var reqSocketId = content["reqSocketId"];
-    var pc = pcs[reqSocketId];
-    pc.addIceCandidate(new RTCIceCandidate({
-      sdpMLineIndex: candidate.sdpMLineIndex,
-      candidate: candidate.candidate
-    }));
-  });
 
   $("#startBtn").click(function () {
     var videoConstraints = $("#mediaSelect").val() == 1 ? { 'facingMode': "user" } : false;
@@ -137,10 +139,10 @@ socket.on("connect", function () {
         var videoTracks = localStream.getVideoTracks();
         var audioTracks = localStream.getAudioTracks();
 
-        var mediaDiv = $('<div><span class="htext">LOCAL</span><video style="transform: scaleX(-1);" autoplay muted></video></div>');
+        var mediaDiv = $('<div><span class="htext">LOCAL</span><video style="transform: scaleX(-1);" autoplay="true" muted></video></div>');
         mediaDiv.find("video")[0].srcObject = localStream;
         if (videoTracks.length == 0) {
-          mediaDiv = $('<div style="padding-top:10px;"><span style="position: relative; top: -22px;">LOCAL: </span><audio autoplay controls muted></audio></div>');
+          mediaDiv = $('<div style="padding-top:10px;"><span style="position: relative; top: -22px;">LOCAL: </span><audio autoplay controls ></audio></div>');
           mediaDiv.find("audio")[0].srcObject = localStream;
         }
 
@@ -161,20 +163,21 @@ socket.on("connect", function () {
       }
     );
   }
+
+  if (localStream) {
+    joinRoom();
+  }
+
+  function joinRoom() {
+    //Only join the room if local media is active!
+    var roomname = getUrlParam("roomname", "unknown");
+    socket.emit("joinRoom", roomname, function (newIceServers) {
+      iceServers["iceServers"] = newIceServers;
+      console.log("got newIceServers", newIceServers)
+      startWebRTC();
+    });
+  }
 });
-
-if (localStream) {
-  joinRoom();
-}
-
-function joinRoom() {
-  //Only join the room if local media is active!
-  var roomname = getUrlParam("roomname", "unknown");
-  socket.emit("joinRoom", roomname, function (newIceServers) {
-    iceServers["iceServers"] = newIceServers;
-    console.log("got newIceServers", newIceServers)
-  });
-}
 
 function gotRemoteStream(event, socketId) {
   var videoTracks = event.stream.getVideoTracks();
