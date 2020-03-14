@@ -29,7 +29,6 @@ var server = https.createServer({
 
 var icesevers = JSON.parse(fs.readFileSync("./iceservers.json", 'utf8'));
 
-
 var ioServer = io.listen(server);
 console.log("--------------------------------------------");
 console.log("SIGNALINGSERVER RUNNING ON PORT: " + HTTPS_PORT);
@@ -65,12 +64,13 @@ ioServer.sockets.on('connection', function (socket) {
     socket.on("signaling", function (content) {
         var reqSocketId = content.reqSocketId;
         var data = content.data;
-        
-        if(content.type == "start") { //Send start to room
-            console.log("START YO")
-            socket.to(content.roomname).emit('signaling', { type : "start", reqSocketId: socket.id });
+
+        if (content.type == "start") { //Send start to room
+            socket.to(content.roomname).emit('signaling', { type: "start", reqSocketId: socket.id });
+        } else if (content.type == "renegotiate") { //Send start to room
+            ioServer.to(reqSocketId).emit('signaling', { type: "renegotiate", reqSocketId: socket.id });
         } else {
-            ioServer.to(reqSocketId).emit('signaling', { data : data, reqSocketId: socket.id });
+            ioServer.to(reqSocketId).emit('signaling', { data: data, reqSocketId: socket.id });
         }
     });
 })

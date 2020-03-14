@@ -4,8 +4,8 @@ var socket = subdir == "/" ? io() : io("", { "path": subdir + "/socket.io" }); /
 //Constants
 var localStream = null;
 var offerOptions = {
-  offerToReceiveAudio: 1, //Want audio
-  offerToReceiveVideo: 1  //Want video
+  offerToReceiveAudio: true, //Want audio
+  offerToReceiveVideo: true  //Want video
 };
 var constraints = { video: true, audio: true };
 var iceServers = {
@@ -25,24 +25,29 @@ socket.on("connect", function () {
   socket.on("signaling", async function (content) {
     var signalData = content ? content.data : {};
     var reqSocketId = content.reqSocketId;
-    
-    console.log("signaling", content)
 
-    if (content.type == "start") { //STEP 1 (Initiator: getting an offer req)
+    async function negotiate() {
+      //Create offer
+      console.log('negotiate!');
+      const offer = await pcs[reqSocketId].createOffer(offerOptions);
+      if (pcs[reqSocketId].signalingState != "stable") return;
+      await pcs[reqSocketId].setLocalDescription(offer);
+      console.log("Sending SDP offer!");
+      socket.emit("signaling", { reqSocketId: reqSocketId, data: pcs[reqSocketId].localDescription });
+    }
+
+    if (content.type == "renegotiate") {
+      console.log("renegotiate ---------------")
+      negotiate();
+    } else if (content.type == "start") { //STEP 1 (Initiator: getting an offer req)
       var pc = new RTCPeerConnection(iceServers);
-
       console.log('Adding local stream to initiator PC');
-      pc.addStream(localStream); //Set Local Stream
 
       pcs[reqSocketId] = pc;
 
       pc.onnegotiationneeded = async function () {
-        //Create offer
-        console.log('PC initiator created offer!');
-        await pc.setLocalDescription(await pc.createOffer(offerOptions))
         //STEP 2 (Initiator: SEND the SDP offer)
-        console.log("Sending SDP offer!");
-        socket.emit("signaling", { reqSocketId: reqSocketId, data: pc.localDescription });
+        negotiate()
       }
 
       pc.onicecandidate = function (e) {
@@ -50,11 +55,17 @@ socket.on("connect", function () {
         socket.emit("signaling", { reqSocketId: reqSocketId, data: e.candidate });
       };
 
-      pc.oniceconnectionstatechange = function (e) {
+      pc.oniceconnectionstatechange = async function (e) {
         console.log('ICE state: ' + pc.iceConnectionState);
+        if (pc.iceConnectionState == "connected") {
+          
+        }
+
         if (pc.iceConnectionState == 'disconnected') {
           $("#" + reqSocketId).remove();
-          console.log("ICE state: ", pc.iceConnectionState)
+        } else if (pc.iceConnectionState == 'failed') { //Try to reconnect
+          await pc.setLocalDescription(await pc.createOffer({ iceRestart: true }))
+          socket.emit("signaling", { reqSocketId: reqSocketId, data: pc.localDescription });
         }
       };
 
@@ -62,12 +73,19 @@ socket.on("connect", function () {
         gotRemoteStream(event, reqSocketId);
       };
 
-    } else if (signalData && signalData.type == "offer") { //STEP 3 (Callee: Get Offer and Create Answer)
-      if (!pcs[reqSocketId]) {
-        var pc = new RTCPeerConnection(iceServers);
-        pc.addStream(localStream); //add local stream to peer
+      pc.addStream(localStream); //Set Local Stream
+      //negotiate();
 
+    } else if (signalData && signalData.type == "offer") { //STEP 3 (Callee: Get Offer and Create Answer)
+
+      if (!pcs[reqSocketId]) { //Create a new connection
+        var pc = new RTCPeerConnection(iceServers);
         pcs[reqSocketId] = pc;
+        pc.addStream(localStream); //add Local Stream
+
+        pc.onnegotiationneeded = async function () {
+          socket.emit("signaling", { reqSocketId: reqSocketId, type: "renegotiate" }); //Request offers from other partys
+        }
 
         pc.onicecandidate = function (e) {
           if (!pc || !e || !e.candidate) return;
@@ -86,35 +104,28 @@ socket.on("connect", function () {
         pc.onaddstream = function (event) {
           gotRemoteStream(event, reqSocketId);
         };
-
-        //STEP 4 (Callee: Create and send Answer)
-        console.log('Set remote Success. Creating answer');
-        if (pc.signalingState != "stable") { //If not stable ask for renegotiation
-          await Promise.all([
-            pc.setLocalDescription({ type: "rollback" }), //Be polite
-            await pc.setRemoteDescription(new RTCSessionDescription(signalData))
-          ]);
-        } else {
-          await pc.setRemoteDescription(new RTCSessionDescription(signalData))
-        }
-
-        await pc.setLocalDescription(await pc.createAnswer());
-        console.log('Created answer!');
-        socket.emit("signaling", { reqSocketId: reqSocketId, data: pc.localDescription });
-      } else {
-        await pc.setRemoteDescription(new RTCSessionDescription(signalData))
       }
+
+      //STEP 4 (Callee: Create and send Answer)
+      console.log('Set remote Success. Creating answer');
+      if (pcs[reqSocketId].signalingState != "stable") { //If not stable ask for renegotiation
+        await Promise.all([
+          pcs[reqSocketId].setLocalDescription({ type: "rollback" }), //Be polite
+          await pcs[reqSocketId].setRemoteDescription(new RTCSessionDescription(signalData))
+        ]);
+      } else {
+        await pcs[reqSocketId].setRemoteDescription(new RTCSessionDescription(signalData))
+      }
+
+      await pcs[reqSocketId].setLocalDescription(await pcs[reqSocketId].createAnswer());
+      console.log('Created answer!');
+      socket.emit("signaling", { reqSocketId: reqSocketId, data: pcs[reqSocketId].localDescription });
+
     } else if (signalData && signalData.type == "answer") { //STEP 5 (Initiator: Setting answer and starting connection)
-      var pc = pcs[reqSocketId];
       console.log('set Sdp setting answer', signalData);
-      pc.setRemoteDescription(new RTCSessionDescription(signalData))
-    } else if(signalData && signalData.candidate){ //is a icecandidate thing
-      var candidate = signalData;
-      var pc = pcs[reqSocketId];
-      pc.addIceCandidate(new RTCIceCandidate({
-        sdpMLineIndex: candidate.sdpMLineIndex,
-        candidate: candidate.candidate
-      }));
+      pcs[reqSocketId].setRemoteDescription(new RTCSessionDescription(signalData))
+    } else if (signalData && signalData.candidate) { //is a icecandidate thing
+      pcs[reqSocketId].addIceCandidate(new RTCIceCandidate(signalData));
     }
   })
 
