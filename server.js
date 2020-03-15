@@ -56,22 +56,17 @@ ioServer.sockets.on('connection', function (socket) {
                 returnIce.push(icesevers[i]);
             }
         }
-        callback(returnIce)
-        console.log("joinRoom", roomname)
+        callback(returnIce);
+        socket.to(roomname).emit('userJoined', socket.id);
+        console.log("joinRoom", roomname, socket.id);
         socket.join(roomname);
     })
 
     socket.on("signaling", function (content) {
-        var reqSocketId = content.reqSocketId;
-        var data = content.data;
+        var destSocketId = content.destSocketId;
+        var signalingData = content.signalingData;
 
-        if (content.type == "start") { //Send start to room
-            socket.to(content.roomname).emit('signaling', { type: "start", reqSocketId: socket.id });
-        } else if (content.type == "renegotiate") { //Send start to room
-            ioServer.to(reqSocketId).emit('signaling', { type: "renegotiate", reqSocketId: socket.id });
-        } else {
-            ioServer.to(reqSocketId).emit('signaling', { data: data, reqSocketId: socket.id });
-        }
+        ioServer.to(destSocketId).emit('signaling', { signalingData: signalingData, fromSocketId: socket.id });
     });
 })
 
