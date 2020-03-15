@@ -1,8 +1,9 @@
+//@ts-check
 function initEzWebRTC(initiator, config, id) {
     var _this = this;
 
     var rtcConfig = { //Default Values
-        offerOptions : {
+        offerOptions: {
             offerToReceiveAudio: true, //Want audio
             offerToReceiveVideo: true  //Want video
         },
@@ -22,7 +23,7 @@ function initEzWebRTC(initiator, config, id) {
     var pc = new RTCPeerConnection(rtcConfig);
 
     pc.onnegotiationneeded = async function () {
-        if(initiator) {
+        if (initiator) {
             negotiate()
         } else {
             _this.emitEvent("signaling", "renegotiate"); //Request the initiator for renegotiation
@@ -31,12 +32,19 @@ function initEzWebRTC(initiator, config, id) {
 
     pc.onicecandidate = function (e) {
         if (!pc || !e || !e.candidate) return;
-       _this.emitEvent("signaling", e.candidate)
+        _this.emitEvent("signaling", e.candidate)
     };
 
-    pc.onaddstream = function (event) {
-        _this.emitEvent("stream", event.stream)
-    };
+    var knownStreams = {};
+    pc.ontrack = function (event) {
+        event.streams.forEach(eventStream => {
+            _this.emitEvent('track', event.track, eventStream);
+            if (!knownStreams[eventStream.id]) {
+                _this.emitEvent("stream", eventStream)
+            }
+            knownStreams[eventStream.id] = true;
+        });
+    }
 
     pc.oniceconnectionstatechange = async function (e) {
         console.log('ICE state: ' + pc.iceConnectionState);
@@ -49,12 +57,6 @@ function initEzWebRTC(initiator, config, id) {
             _this.emitEvent("signaling", pc.localDescription)
         }
     };
-
-    if (rtcConfig.stream) {
-        pc.addStream(rtcConfig.stream); //Add stream at start, this will trigger negotiation on initiator
-    } else if(initiator) { //start negotiation without a stream if we are initiator
-        negotiate(); 
-    }
 
     this.signaling = async function (signalData) { //Handle signaling
         if (signalData == "renegotiate") { //Got renegotiate request, so do it
@@ -74,7 +76,23 @@ function initEzWebRTC(initiator, config, id) {
             pc.setRemoteDescription(new RTCSessionDescription(signalData))
         } else if (signalData && signalData.candidate) { //is a icecandidate thing
             pc.addIceCandidate(new RTCIceCandidate(signalData));
-        } 
+        }
+    }
+
+    this.addStream = function (stream) {
+        stream.getTracks().forEach(track => {
+            pc.addTrack(track, stream)
+        })
+    }
+
+    this.addTrack = function(track, stream) {
+        pc.addTrack(track, stream);
+    }
+
+    if (rtcConfig.stream) {
+        this.addStream(rtcConfig.stream); //Add stream at start, this will trigger negotiation on initiator
+    } else if (initiator) { //start negotiation without a stream if we are initiator
+        negotiate();
     }
 
     async function negotiate() {
@@ -82,10 +100,6 @@ function initEzWebRTC(initiator, config, id) {
         if (pc.signalingState != "stable") return;
         await pc.setLocalDescription(offer);
         _this.emitEvent("signaling", pc.localDescription)
-    }
-
-    this.addStream = function(stream) {
-        pc.addStream(stream);
     }
 
     this.mappedEvents = {};

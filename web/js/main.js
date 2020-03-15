@@ -24,13 +24,18 @@ socket.on("connect", function () {
   })
 });
 
+//This is where the WEBRTC Magic happens!!!
 function createRemoteSocket(initiator, socketId) {
   pcs[socketId] = new initEzWebRTC(initiator, webRTCConfig); //initiator
   pcs[socketId].on("signaling", function (data) {
     socket.emit("signaling", { destSocketId: socketId, signalingData: data })
   })
   pcs[socketId].on("stream", function (stream) {
+    console.log("ADDSTREAN", stream)
     gotRemoteStream(stream, socketId)
+  });
+  pcs[socketId].on("disconnect", function (stream) {
+    $("#" + socketId).remove();
   });
 }
 
