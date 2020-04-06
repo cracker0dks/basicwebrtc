@@ -33,8 +33,9 @@ function createRemoteSocket(initiator, socketId) {
   pcs[socketId].on("stream", function (stream) {
     gotRemoteStream(stream, socketId)
   });
-  pcs[socketId].on("disconnect", function (stream) {
+  pcs[socketId].on("closed", function (stream) {
     $("#" + socketId).remove();
+    console.log("disconnected!");
   });
 }
 
