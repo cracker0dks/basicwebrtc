@@ -16,7 +16,6 @@ var certificate = fs.readFileSync('./cert/cert.pem');
 var https = require('https');
 var express = require('express');
 var io = require('socket.io');
-var crypto = require('crypto');
 
 //SpinUP Webserver with socketIO
 var app = express();
