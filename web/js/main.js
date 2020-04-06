@@ -103,7 +103,7 @@ function initLocalMedia() {
       var mediaDiv = $('<div><span class="htext">LOCAL</span><video style="transform: scaleX(-1);" autoplay="true" muted></video></div>');
       mediaDiv.find("video")[0].srcObject = localStream;
       if (videoTracks.length == 0) {
-        mediaDiv = $('<div style="padding-top:10px;"><span style="position: relative; top: -22px;">LOCAL: </span><audio autoplay controls ></audio></div>');
+        mediaDiv = $('<div style="padding-top:10px;"><span style="position: relative; top: -22px;">LOCAL: </span><audio autoplay controls muted></audio></div>');
         mediaDiv.find("audio")[0].srcObject = localStream;
       }
 
