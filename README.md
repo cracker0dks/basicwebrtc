@@ -11,4 +11,4 @@ Basic p2p group webRTC
 
 Set own ice Servers at: /iceservers.json
 
-Change the roomname get parameter if you want: https://IP:3001?roomname=yourSecretRoom
+Change the roomname get parameter if you want: https://IP:3001/?roomname=yourSecretRoom
