@@ -8,6 +8,7 @@ body {
   word-break: break-word;
   font-family: Monospace;
   overflow: hidden;
+  background: rgb(71, 71, 71);
 }
 
 div#container {
@@ -76,4 +77,10 @@ ul>li {
 
 .fa-microphone-alt {
   color: #044e04;
+}
+
+.videoplaceholder {
+  -webkit-box-shadow: inset -9px -9px 0px -8px rgb(62, 61, 61);
+  -moz-box-shadow: inset -9px -9px 0px -8px rgb(62, 61, 61);
+  box-shadow: inset -9px -9px 0px -8px rgb(62, 61, 61);
 }

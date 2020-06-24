@@ -183,7 +183,7 @@ function updateUserLayout() {
   for (var i in allUserStreams) {
     var userStream = allUserStreams[i];
     streamCnt++;
-    var userDiv = $('<div style="background:rgb(71, 71, 71); position:relative;" id="' + i + '">' +
+    var userDiv = $('<div class="videoplaceholder" style="background:rgb(71, 71, 71); position:relative;" id="' + i + '">' +
       '<div class="userPlaceholder">' + i.substr(0, 2).toUpperCase() + '</div>' +
       '</div>')
 
@@ -204,29 +204,29 @@ function updateUserLayout() {
   }
 
   $("#mediaDiv").empty();
-  if (streamCnt == 1) {
-    allUserDivs[i].css({ width: '100%', height: '100%' });
-    $("#mediaDiv").append(allUserDivs[socket.id])
-  } else if (streamCnt == 2) {
+
+  if (streamCnt == 2) { //Display 2 users side by side
     for (var i in allUserDivs) {
       allUserDivs[i].css({ width: '50%', height: '100%', float: 'left' });
       $("#mediaDiv").append(allUserDivs[i])
     }
   } else {
     var lineCnt = Math.ceil(Math.sqrt(streamCnt));
-    for(var i=1; i<lineCnt+1; i++) {
-      $("#mediaDiv").append('<div id="line'+i+'"></div>')
+    for (var i = 1; i < lineCnt + 1; i++) {
+      $("#mediaDiv").append('<div id="line' + i + '"></div>')
     }
-    let userPerLine = Math.ceil(streamCnt / lineCnt);
+    let userPerLine = streamCnt <= 2 ? 1 : Math.ceil(streamCnt / lineCnt);
+    console.log(userPerLine)
     let cucnt = 1;
     for (var i in allUserDivs) {
       var cLineNr = Math.ceil(userPerLine / cucnt);
-      console.log(userPerLine, cLineNr)
-      allUserDivs[i].css({ width: 100/userPerLine+'%', height: 100/lineCnt+'%', float: 'left' });
-      $("#line"+cLineNr).append(allUserDivs[i])
+      allUserDivs[i].css({ width: 100 / userPerLine + '%', height: 100 / lineCnt + '%', float: 'left' });
+      $("#line" + cLineNr).append(allUserDivs[i])
       cucnt++;
     }
   }
+
+
 }
 
 function joinRoom() {
