@@ -1,6 +1,16 @@
 var subdir = window.location.pathname.endsWith("/") ? window.location.pathname : window.location.pathname + "/";
-var socket = subdir == "/" ? io() : io("", { "path": subdir + "/socket.io" }); //Connect to socketIo even on subpaths
 
+subdir = getUrlParam("subdir", subdir);
+var socketDomain = getUrlParam("socketdomain", false);
+var socket;
+if (socketDomain) {
+  socket = io(socketDomain, { "path": subdir + "socket.io" })
+} else {
+  socket = subdir == "/" ? io() : io("", { "path": subdir + "/socket.io" }); //Connect to socketIo even on subpaths
+}
+
+
+var username = getUrlParam("username", "NA")
 var webRTCConfig = {};
 
 var allUserStreams = {};
@@ -183,8 +193,9 @@ function updateUserLayout() {
   for (var i in allUserStreams) {
     var userStream = allUserStreams[i];
     streamCnt++;
+    var uDisplay = username == "NA" ? i.substr(0, 2).toUpperCase() : username.substr(0, 2).toUpperCase();
     var userDiv = $('<div class="videoplaceholder" style="background:rgb(71, 71, 71); position:relative;" id="' + i + '">' +
-      '<div class="userPlaceholder">' + i.substr(0, 2).toUpperCase() + '</div>' +
+      '<div class="userPlaceholder">' + uDisplay + '</div>' +
       '</div>')
 
     if (userStream["audiostream"] && i !== socket.id) {
@@ -216,7 +227,6 @@ function updateUserLayout() {
       $("#mediaDiv").append('<div id="line' + i + '"></div>')
     }
     let userPerLine = streamCnt <= 2 ? 1 : Math.ceil(streamCnt / lineCnt);
-    console.log(userPerLine)
     let cucnt = 1;
     for (var i in allUserDivs) {
       var cLineNr = Math.ceil(userPerLine / cucnt);
@@ -225,8 +235,6 @@ function updateUserLayout() {
       cucnt++;
     }
   }
-
-
 }
 
 function joinRoom() {
