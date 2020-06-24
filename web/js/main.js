@@ -28,9 +28,15 @@ socket.on("connect", function () {
       createRemoteSocket(false, fromSocketId)
     }
     pcs[fromSocketId].signaling(signalingData);
+
+    if (data.username) {
+      allUserStreams[fromSocketId] = allUserStreams[fromSocketId] ? allUserStreams[fromSocketId] : {};
+      allUserStreams[fromSocketId]["username"] = data.username;
+    }
   })
 
-  socket.on("userJoined", function (userSocketId) {
+  socket.on("userJoined", function (content) {
+    var userSocketId = content["socketId"];
     createRemoteSocket(true, userSocketId)
   })
 
@@ -54,9 +60,11 @@ socket.on("connect", function () {
 
     var audioTracks = stream.getAudioTracks();
 
+    username = username == "NA" ? i.substr(0, 2).toUpperCase() : username.substr(0, 2).toUpperCase()
     if (audioTracks.length >= 1) {
       allUserStreams[socket.id] = {
-        audiostream: stream
+        audiostream: stream,
+        username: username
       }
     }
 
@@ -167,6 +175,12 @@ function createRemoteSocket(initiator, socketId) {
     updateUserLayout();
     console.log("disconnected!");
   });
+
+  if(allUserStreams[socket.id]["videostream"]) {
+    setTimeout(function() {
+      pcs[socketId].addStream(allUserStreams[socket.id]["videostream"])
+    }, 1000)
+  }
 }
 
 function gotRemoteStream(stream, socketId) {
@@ -193,9 +207,11 @@ function updateUserLayout() {
   for (var i in allUserStreams) {
     var userStream = allUserStreams[i];
     streamCnt++;
-    var uDisplay = username == "NA" ? i.substr(0, 2).toUpperCase() : username.substr(0, 2).toUpperCase();
+    var uDisplay = userStream["username"] ? userStream["username"] : i.substr(0, 2).toUpperCase();
     var userDiv = $('<div class="videoplaceholder" style="background:rgb(71, 71, 71); position:relative;" id="' + i + '">' +
+      '<div style="width:100%; height:100%; border: 1px solid gray; overflow:hidden; background: #474747;">' +
       '<div class="userPlaceholder">' + uDisplay + '</div>' +
+      '</div>' +
       '</div>')
 
     if (userStream["audiostream"] && i !== socket.id) {
@@ -207,7 +223,11 @@ function updateUserLayout() {
     }
 
     if (userStream["videostream"]) {
-      userDiv.append('<div id="video' + i + '" style="position: absolute; top: 0px; width: 100%;"><video autoplay muted></video></div>');
+      var mirrorStyle = ""
+      if(i == socket.id) {
+        mirrorStyle = "transform: scaleX(-1);"
+      }
+      userDiv.append('<div id="video' + i + '" style="'+mirrorStyle+' position: absolute; top: 0px; width: 101%;"><video autoplay muted></video></div>');
       userDiv.find("video")[0].srcObject = userStream["videostream"];
     }
 
@@ -222,17 +242,25 @@ function updateUserLayout() {
       $("#mediaDiv").append(allUserDivs[i])
     }
   } else {
-    var lineCnt = Math.ceil(Math.sqrt(streamCnt));
+    var lineCnt = Math.round(Math.sqrt(streamCnt));
     for (var i = 1; i < lineCnt + 1; i++) {
       $("#mediaDiv").append('<div id="line' + i + '"></div>')
     }
     let userPerLine = streamCnt <= 2 ? 1 : Math.ceil(streamCnt / lineCnt);
+    console.log(userPerLine)
     let cucnt = 1;
     for (var i in allUserDivs) {
-      var cLineNr = Math.ceil(userPerLine / cucnt);
+      var cLineNr = Math.ceil(cucnt / userPerLine);
       allUserDivs[i].css({ width: 100 / userPerLine + '%', height: 100 / lineCnt + '%', float: 'left' });
       $("#line" + cLineNr).append(allUserDivs[i])
       cucnt++;
+    }
+
+    var lastLineElsCnt = $("#line" + lineCnt).find(".videoplaceholder").length;
+   // console.log(lastLineElsCnt, userPerLine)
+    if (lastLineElsCnt != userPerLine) {
+      var p = (100 / userPerLine) / 2;
+      $("#line" + lineCnt).find(".videoplaceholder").css({ "left": p + "%" })
     }
   }
 }
@@ -240,7 +268,7 @@ function updateUserLayout() {
 function joinRoom() {
   //Only join the room if local media is active!
   var roomname = getUrlParam("roomname", "unknown");
-  socket.emit("joinRoom", roomname, function () {
+  socket.emit("joinRoom", { roomname: roomname, username: username }, function () {
     console.log("joined room", roomname)
   });
 }

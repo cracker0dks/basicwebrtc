@@ -37,16 +37,20 @@ console.log("--------------------------------------------");
 //Listen for IO connections and do signaling
 ioServer.sockets.on('connection', function (socket) {
     let roomOfUser = null;
+    let nameOfUser = "NA";
     console.log("NEW USER!");
 
     socket.on("closeConnection", function () {
         socket.to(roomOfUser).emit('userDiscconected', socket.id);
     });
 
-    socket.on("joinRoom", function (roomname, callback) {
+    socket.on("joinRoom", function (content, callback) {
+        var roomname = content["roomname"] || "";
+        var username = content["username"] || "";
         if (!roomOfUser) {
             roomOfUser = roomname;
-            socket.to(roomname).emit('userJoined', socket.id);
+            nameOfUser = username;
+            socket.to(roomname).emit('userJoined', { socketId : socket.id });
             console.log("joinRoom", roomname, socket.id);
             socket.join(roomname);
         }
@@ -56,7 +60,7 @@ ioServer.sockets.on('connection', function (socket) {
         var destSocketId = content.destSocketId;
         var signalingData = content.signalingData;
 
-        ioServer.to(destSocketId).emit('signaling', { signalingData: signalingData, fromSocketId: socket.id });
+        ioServer.to(destSocketId).emit('signaling', { signalingData: signalingData, fromSocketId: socket.id, username : nameOfUser });
     });
 
     //Return the current iceServers
