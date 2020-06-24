@@ -1,15 +1,16 @@
 var subdir = window.location.pathname.endsWith("/") ? window.location.pathname : window.location.pathname + "/";
 var socket = subdir == "/" ? io() : io("", { "path": subdir + "/socket.io" }); //Connect to socketIo even on subpaths
 
-var localStream = null;
-
-var constraints = { video: true, audio: true };
-
 var webRTCConfig = {};
 
+var allUserStreams = {};
 var pcs = {}; //Peer connections to all remotes
+var socketConnected = false;
+var micMuted = false;
+var camActive = false;
 
 socket.on("connect", function () {
+  socketConnected = true;
   socket.on("signaling", function (data) {
     var signalingData = data.signalingData;
     var fromSocketId = data.fromSocketId;
@@ -22,7 +23,115 @@ socket.on("connect", function () {
   socket.on("userJoined", function (userSocketId) {
     createRemoteSocket(true, userSocketId)
   })
+
+  socket.on("userDiscconected", function (userSocketId) {
+    delete allUserStreams[userSocketId];
+    $('audio' + userSocketId).remove();
+    updateUserLayout();
+  })
+
+  socket.on("currentIceServers", function (newIceServers) {
+    console.log("got newIceServers", newIceServers)
+    webRTCConfig["iceServers"] = newIceServers;
+  })
+
+  navigator.getUserMedia({
+    video: false, // { 'facingMode': "user" }
+    audio: { 'echoCancellation': true, 'noiseSuppression': true }
+  }, function (stream) { //OnSuccess
+    webRTCConfig["stream"] = stream;
+    console.log('getUserMedia success! Stream: ', stream);
+
+    var audioTracks = stream.getAudioTracks();
+
+    if (audioTracks.length >= 1) {
+      allUserStreams[socket.id] = {
+        audiostream: stream
+      }
+    }
+
+    if (audioTracks.length > 0) {
+      console.log('Using audio device: ' + audioTracks[0].label);
+    }
+
+    joinRoom();
+    updateUserLayout();
+  }, function (error) { //OnError
+    alert("Could not get your Camera / Mic!")
+    console.log('getUserMedia error! Got this error: ', error);
+  });
+
 });
+
+$(window).on("beforeunload", function () {
+  if (socketConnected) {
+    socket.emit('closeConnection', null);
+  }
+})
+
+$(document).ready(function () {
+  $("#muteUnmuteMicBtn").click(function () {
+    if (!micMuted) {
+      $("#muteUnmuteMicBtn").html('<i class="fas fa-microphone-alt-slash"></i>');
+      if (allUserStreams[socket.id] && allUserStreams[socket.id]["audiostream"]) {
+        allUserStreams[socket.id]["audiostream"].getAudioTracks()[0].enabled = false;
+      }
+    } else {
+      $("#muteUnmuteMicBtn").html('<i class="fas fa-microphone-alt"></i>');
+      if (allUserStreams[socket.id] && allUserStreams[socket.id]["audiostream"]) {
+        allUserStreams[socket.id]["audiostream"].getAudioTracks()[0].enabled = true;
+      }
+    }
+    micMuted = !micMuted;
+  })
+
+  $("#addRemoveCameraBtn").click(function () {
+    if (!camActive) {
+      $("#addRemoveCameraBtn").css({ color: "#030356" });
+      navigator.getUserMedia({
+        video: { 'facingMode': "user" },
+        audio: false
+      }, function (stream) { //OnSuccess
+        for (var i in pcs) { //Add stream to all peers
+          pcs[i].addStream(stream);
+        }
+
+        console.log('getUserMedia success! Stream: ', stream);
+        console.log('LocalStream', stream.getVideoTracks());
+
+        var videoTracks = stream.getVideoTracks();
+
+        if (videoTracks.length >= 1) {
+          allUserStreams[socket.id]["videostream"] = stream;
+        }
+
+        if (videoTracks.length > 0) {
+          console.log('Using video device: ' + videoTracks[0].label);
+        }
+
+        updateUserLayout();
+        camActive = true;
+      }, function (error) { //OnError
+        alert("Could not get your Camera!")
+        console.log('getUserMedia error! Got this error: ', error);
+        $("#addRemoveCameraBtn").css({ color: "black" });
+      });
+    } else {
+      $("#addRemoveCameraBtn").css({ color: "black" });
+      for (var i in pcs) { //remove stream from all peers
+        pcs[i].removeStream(allUserStreams[socket.id]["videostream"]);
+      }
+      delete allUserStreams[socket.id]["videostream"];
+      socket.emit('removeCamera', true)
+      updateUserLayout();
+      camActive = false;
+    }
+  });
+
+  $("#cancelCallBtn").click(function () {
+    location.href = "ended.html"
+  })
+})
 
 //This is where the WEBRTC Magic happens!!!
 function createRemoteSocket(initiator, socketId) {
@@ -33,18 +142,20 @@ function createRemoteSocket(initiator, socketId) {
   pcs[socketId].on("stream", function (stream) {
     gotRemoteStream(stream, socketId)
   });
-  pcs[socketId].on("closed", function (stream) {
-    $("#" + socketId).remove();
-    console.log("disconnected!");
-  });
-}
+  pcs[socketId].on("streamremoved", function (stream, kind) {
+    console.log("STREAMREMOVED!")
 
-function joinRoom() {
-  //Only join the room if local media is active!
-  var roomname = getUrlParam("roomname", "unknown");
-  socket.emit("joinRoom", roomname, function (newIceServers) {
-    webRTCConfig["iceServers"] = newIceServers;
-    console.log("got newIceServers", newIceServers)
+    if (kind == "video") {
+      delete allUserStreams[socketId]["videostream"];
+      updateUserLayout();
+    }
+
+  });
+  pcs[socketId].on("closed", function (stream) {
+    delete allUserStreams[socketId];
+    $('audio' + socketId).remove();
+    updateUserLayout();
+    console.log("disconnected!");
   });
 }
 
@@ -56,87 +167,72 @@ function gotRemoteStream(stream, socketId) {
   console.log("audioTracks", audioTracks)
 
   $("#" + socketId).remove();
-  if (videoTracks.length >= 1 && audioTracks.length >= 1) {
-    var div = $('<div" id="' + socketId + '"><span class="htext">REMOTE</span>' +
-      '<video autoplay controls></video>' +
-      '</div>')
-    $("#remoteMedia").append(div)
-
-
-    div.find("video")[0].srcObject = stream;
+  allUserStreams[socketId] = allUserStreams[socketId] ? allUserStreams[socketId] : {};
+  if (videoTracks.length >= 1) { //Videosteam
+    allUserStreams[socketId]["videostream"] = stream;
   } else {
-    var div = $('<div style="padding-top:10px;" id="' + socketId + '"><span style="position: relative; top: -22px;">REMOTE: </span>' +
-      '<audio autoplay controls></audio>' +
-      '</div>')
-    $("#remoteMedia").append(div)
-
-    div.find("audio")[0].srcObject = stream;
+    allUserStreams[socketId]["audiostream"] = stream;
   }
+
+  updateUserLayout();
 };
 
-if (localStream) {
-  joinRoom();
-}
+function updateUserLayout() {
+  var streamCnt = 0;
+  var allUserDivs = {};
+  for (var i in allUserStreams) {
+    var userStream = allUserStreams[i];
+    streamCnt++;
+    var userDiv = $('<div style="background:rgb(71, 71, 71); position:relative;" id="' + i + '">' +
+      '<div class="userPlaceholder">' + i.substr(0, 2).toUpperCase() + '</div>' +
+      '</div>')
 
-$("#startBtn").click(function () {
-  var videoConstraints = $("#mediaSelect").val() == 1 ? { 'facingMode': "user" } : false;
-  constraints = {
-    video: videoConstraints,
-    audio: { 'echoCancellation': true, 'noiseSuppression': true }
-  };
-  $("#start").remove();
-  $("#container").show();
-  initLocalMedia();
-})
-
-function initLocalMedia() {
-  navigator.getUserMedia(constraints,
-    function (stream) { //OnSuccess
-      localStream = stream;
-      webRTCConfig["stream"] = stream;
-      console.log('getUserMedia success! Stream: ', stream);
-      console.log('LocalStream', localStream.getVideoTracks());
-
-      var videoTracks = localStream.getVideoTracks();
-      var audioTracks = localStream.getAudioTracks();
-
-      var mediaDiv = $('<div><span class="htext">LOCAL</span><video style="transform: scaleX(-1);" autoplay="true" muted></video></div>');
-      mediaDiv.find("video")[0].srcObject = localStream;
-      if (videoTracks.length == 0) {
-        mediaDiv = $('<div style="padding-top:10px;"><span style="position: relative; top: -22px;">LOCAL: </span><audio autoplay controls muted></audio></div>');
-        mediaDiv.find("audio")[0].srcObject = localStream;
+    if (userStream["audiostream"] && i !== socket.id) {
+      if ($("#audioStreams").find('audio' + i).length == 0) {
+        let audioDiv = $('<div id="audio' + i + '" style="display:none;"><audio autoplay></audio></div>');
+        audioDiv.find("audio")[0].srcObject = userStream["audiostream"];
+        $("#audioStreams").append(audioDiv);
       }
-
-      $("#localMedia").append(mediaDiv)
-
-      if (videoTracks.length > 0) {
-        console.log('Using video device: ' + videoTracks[0].label);
-      }
-      if (audioTracks.length > 0) {
-        console.log('Using audio device: ' + audioTracks[0].label);
-      }
-
-      joinRoom();
-    },
-    function (error) { //OnError
-      alert("Could not get your Camera / Mic!")
-      console.log('getUserMedia error! Got this error: ', error);
     }
-  );
-}
 
-function getUrlParam(parameter, defaultvalue) {
-  var urlparameter = defaultvalue;
-  if (window.location.href.indexOf(parameter) > -1) {
-    urlparameter = getUrlVars()[parameter];
+    if (userStream["videostream"]) {
+      userDiv.append('<div id="video' + i + '" style="position: absolute; top: 0px; width: 100%;"><video autoplay muted></video></div>');
+      userDiv.find("video")[0].srcObject = userStream["videostream"];
+    }
+
+    allUserDivs[i] = userDiv;
   }
-  return urlparameter;
+
+  $("#mediaDiv").empty();
+  if (streamCnt == 1) {
+    allUserDivs[i].css({ width: '100%', height: '100%' });
+    $("#mediaDiv").append(allUserDivs[socket.id])
+  } else if (streamCnt == 2) {
+    for (var i in allUserDivs) {
+      allUserDivs[i].css({ width: '50%', height: '100%', float: 'left' });
+      $("#mediaDiv").append(allUserDivs[i])
+    }
+  } else {
+    var lineCnt = Math.ceil(Math.sqrt(streamCnt));
+    for(var i=1; i<lineCnt+1; i++) {
+      $("#mediaDiv").append('<div id="line'+i+'"></div>')
+    }
+    let userPerLine = Math.ceil(streamCnt / lineCnt);
+    let cucnt = 1;
+    for (var i in allUserDivs) {
+      var cLineNr = Math.ceil(userPerLine / cucnt);
+      console.log(userPerLine, cLineNr)
+      allUserDivs[i].css({ width: 100/userPerLine+'%', height: 100/lineCnt+'%', float: 'left' });
+      $("#line"+cLineNr).append(allUserDivs[i])
+      cucnt++;
+    }
+  }
 }
 
-function getUrlVars() {
-  var vars = {};
-  var parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function (m, key, value) {
-    vars[key] = value;
+function joinRoom() {
+  //Only join the room if local media is active!
+  var roomname = getUrlParam("roomname", "unknown");
+  socket.emit("joinRoom", roomname, function () {
+    console.log("joined room", roomname)
   });
-  return vars;
 }

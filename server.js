@@ -36,30 +36,20 @@ console.log("--------------------------------------------");
 
 //Listen for IO connections and do signaling
 ioServer.sockets.on('connection', function (socket) {
+    let roomOfUser = null;
     console.log("NEW USER!");
 
-    socket.on("disconnect", function () {
-        console.log("USER GONE!");
-    })
+    socket.on("closeConnection", function () {
+        socket.to(roomOfUser).emit('userDiscconected', socket.id);
+    });
 
     socket.on("joinRoom", function (roomname, callback) {
-        var returnIce = [];
-        for (var i in icesevers) {
-            if (icesevers[i].turnServerCredential) { //Generate a temp user and password with this turn server creds if given
-                var turnCredentials = getTURNCredentials(icesevers[i].username, icesevers[i].turnServerCredential);
-                returnIce.push({
-                    url: icesevers[i].url,
-                    credential: turnCredentials.password,
-                    username: turnCredentials.username,
-                });
-            } else {
-                returnIce.push(icesevers[i]);
-            }
+        if (!roomOfUser) {
+            roomOfUser = roomname;
+            socket.to(roomname).emit('userJoined', socket.id);
+            console.log("joinRoom", roomname, socket.id);
+            socket.join(roomname);
         }
-        callback(returnIce);
-        socket.to(roomname).emit('userJoined', socket.id);
-        console.log("joinRoom", roomname, socket.id);
-        socket.join(roomname);
     })
 
     socket.on("signaling", function (content) {
@@ -68,6 +58,22 @@ ioServer.sockets.on('connection', function (socket) {
 
         ioServer.to(destSocketId).emit('signaling', { signalingData: signalingData, fromSocketId: socket.id });
     });
+
+    //Return the current iceServers
+    var returnIce = [];
+    for (var i in icesevers) {
+        if (icesevers[i].turnServerCredential) { //Generate a temp user and password with this turn server creds if given
+            var turnCredentials = getTURNCredentials(icesevers[i].username, icesevers[i].turnServerCredential);
+            returnIce.push({
+                url: icesevers[i].url,
+                credential: turnCredentials.password,
+                username: turnCredentials.username,
+            });
+        } else {
+            returnIce.push(icesevers[i]);
+        }
+    }
+    socket.emit('currentIceServers', returnIce);
 })
 
 function getTURNCredentials(name, secret) {
