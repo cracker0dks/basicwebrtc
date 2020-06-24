@@ -1,7 +1,12 @@
 var subdir = window.location.pathname.endsWith("/") ? window.location.pathname : window.location.pathname + "/";
 
+var base64 = getUrlParam("base64", false);
 subdir = getUrlParam("subdir", subdir);
 var socketDomain = getUrlParam("socketdomain", false);
+if(base64) {
+  subdir = atob(subdir);
+  socketDomain = atob(socketDomain);
+}
 var socket;
 if (socketDomain) {
   socket = io(socketDomain, { "path": subdir + "socket.io" })
@@ -60,7 +65,7 @@ socket.on("connect", function () {
 
     var audioTracks = stream.getAudioTracks();
 
-    username = username == "NA" ? i.substr(0, 2).toUpperCase() : username.substr(0, 2).toUpperCase()
+    username = username == "NA" ? socket.id.substr(0, 2).toUpperCase() : username.substr(0, 2).toUpperCase()
     if (audioTracks.length >= 1) {
       allUserStreams[socket.id] = {
         audiostream: stream,
@@ -147,7 +152,7 @@ $(document).ready(function () {
   });
 
   $("#cancelCallBtn").click(function () {
-    location.href = "ended.html"
+    alert("Please close this window / tab!");
   })
 })
 
