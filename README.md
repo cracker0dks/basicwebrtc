@@ -11,4 +11,11 @@ Basic p2p group webRTC
 
 Set own ice Servers at: /iceservers.json
 
-Change the roomname get parameter if you want: https://IP:3001/?roomname=yourSecretRoom
+### All get parameters ###
+* `username` -> Change your username shown
+* `roomname` -> Change the name of the room
+* `camon` -> Start session with cam on
+* `socketDomain` -> Change if you want to use a different socketServer
+* `base64domain` -> true if socketDomain is given in base64 format
+
+Example: change the roomname: https://IP:3001/?roomname=yourSecretRoom&camon=true

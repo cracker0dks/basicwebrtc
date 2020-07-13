@@ -1,12 +1,18 @@
 var subdir = window.location.pathname.endsWith("/") ? window.location.pathname : window.location.pathname + "/";
 
-var base64 = getUrlParam("base64", false);
-subdir = getUrlParam("subdir", subdir);
-var socketDomain = getUrlParam("socketdomain", false);
-if(base64) {
-  subdir = atob(subdir);
+var base64Domain = getUrlParam("base64domain", false);
+
+//ALL GET PARAMETERS
+subdir = getUrlParam("subdir", subdir); //Subdir on the server
+var socketDomain = getUrlParam("socketdomain", false); //Domainname with path
+var camOnAtStart = getUrlParam("camon", false) ? true : false; //Defines if cam should be on at start
+var username = getUrlParam("username", "NA");
+var roomname = getUrlParam("roomname", "unknown");
+
+if (base64) {
   socketDomain = atob(socketDomain);
 }
+
 var socket;
 if (socketDomain) {
   socket = io(socketDomain, { "path": subdir + "socket.io" })
@@ -14,7 +20,6 @@ if (socketDomain) {
   socket = subdir == "/" ? io() : io("", { "path": subdir + "/socket.io" }); //Connect to socketIo even on subpaths
 }
 
-var orgUserName = getUrlParam("username", "NA");
 var webRTCConfig = {};
 
 var allUserStreams = {};
@@ -67,7 +72,7 @@ socket.on("connect", function () {
     if (audioTracks.length >= 1) {
       allUserStreams[socket.id] = {
         audiostream: stream,
-        username: orgUserName
+        username: username
       }
     }
 
@@ -77,6 +82,11 @@ socket.on("connect", function () {
 
     joinRoom();
     updateUserLayout();
+    if (camOnAtStart) { //enable cam on start if set
+      setTimeout(function () {
+        $("#addRemoveCameraBtn").click();
+      }, 1000)
+    }
   }, function (error) { //OnError
     alert("Could not get your Camera / Mic!")
     console.log('getUserMedia error! Got this error: ', error);
@@ -123,6 +133,7 @@ $(document).ready(function () {
         var videoTracks = stream.getVideoTracks();
 
         if (videoTracks.length >= 1) {
+          allUserStreams[socket.id] = allUserStreams[socket.id] ? allUserStreams[socket.id] : {};
           allUserStreams[socket.id]["videostream"] = stream;
         }
 
@@ -149,8 +160,9 @@ $(document).ready(function () {
     }
   });
 
+
   $("#cancelCallBtn").click(function () {
-    if (window.x_extended && typeof window.x_extended.close === "function") {
+    if (window.x_extended && typeof window.x_extended.close === "function") { //Close window if we run in electron app
       window.x_extended.close()
     } else {
       alert("Please close this window / tab!");
@@ -183,11 +195,13 @@ function createRemoteSocket(initiator, socketId) {
     console.log("disconnected!");
   });
 
-  if(allUserStreams[socket.id]["videostream"]) {
-    setTimeout(function() {
-      pcs[socketId].addStream(allUserStreams[socket.id]["videostream"])
-    }, 1000)
-  }
+  pcs[socketId].on("connect", function () {
+    if (allUserStreams[socket.id]["videostream"]) {
+      setTimeout(function () {
+        pcs[socketId].addStream(allUserStreams[socket.id]["videostream"])
+      }, 500)
+    }
+  });
 }
 
 function gotRemoteStream(stream, socketId) {
@@ -214,7 +228,8 @@ function updateUserLayout() {
   for (var i in allUserStreams) {
     var userStream = allUserStreams[i];
     streamCnt++;
-    var uDisplay = userStream["username"] && userStream["username"]!= "NA" ? userStream["username"].substr(0, 2).toUpperCase() : i.substr(0, 2).toUpperCase();
+    console.log(userStream["username"])
+    var uDisplay = userStream["username"] && userStream["username"] != "NA" ? userStream["username"].substr(0, 2).toUpperCase() : i.substr(0, 2).toUpperCase();
     var userDiv = $('<div class="videoplaceholder" style="background:rgb(71, 71, 71); position:relative;" id="' + i + '">' +
       '<div style="width:100%; height:100%; border: 1px solid gray; position:absolute; overflow:hidden; background: #474747;">' +
       '<div class="userPlaceholder">' + uDisplay + '</div>' +
@@ -231,15 +246,17 @@ function updateUserLayout() {
 
     if (userStream["videostream"]) {
       var mirrorStyle = ""
-      if(i == socket.id) {
+      if (i == socket.id) {
         mirrorStyle = "transform: scaleX(-1);"
       }
-      userDiv.append('<div style="position: absolute; width: 100%;"><div id="video' + i + '" style="'+mirrorStyle+' top: 0px; width: 101%;">'+
-      '<video autoplay muted></video>'+
-      
-      '</div>'+
-      '<div style="position: absolute; color: white; bottom: 7px; left: 7px; font-size: 1.7em;">'+(userStream["username"].charAt(0).toUpperCase() + userStream["username"].slice(1))+'</div>'+
-      '</div>');
+      var userDisplayName = userStream["username"] && userStream["username"] != "NA" ? (userStream["username"].charAt(0).toUpperCase() + userStream["username"].slice(1)) : i.substr(0, 2).toUpperCase();
+      userDiv.append(
+        '<div style="position: absolute; color: white; bottom: 7px; right: 7px; font-size: 1.7em;">' + userDisplayName + '</div>' +
+        '<div style="position: absolute; width: 100%;"><div id="video' + i + '" style="' + mirrorStyle + ' top: 0px; width: 101%;">' +
+        '<video autoplay muted></video>' +
+        '</div>' +
+        
+        '</div>');
       userDiv.find("video")[0].srcObject = userStream["videostream"];
     }
 
@@ -250,7 +267,12 @@ function updateUserLayout() {
 
   if (streamCnt == 2) { //Display 2 users side by side
     for (var i in allUserDivs) {
-      allUserDivs[i].css({ width: '50%', height: '100%', float: 'left' });
+      if(i == socket.id) {
+        allUserDivs[i].css({ width: '20%', height: '30%', position: 'absolute', left : '20px', bottom : '30px', 'z-index' : '1' });
+      } else {
+        allUserDivs[i].css({ width: '100%', height: '100%', float: 'left' });
+      }
+      
       $("#mediaDiv").append(allUserDivs[i])
     }
   } else {
@@ -269,7 +291,7 @@ function updateUserLayout() {
     }
 
     var lastLineElsCnt = $("#line" + lineCnt).find(".videoplaceholder").length;
-   // console.log(lastLineElsCnt, userPerLine)
+    // console.log(lastLineElsCnt, userPerLine)
     if (lastLineElsCnt != userPerLine) {
       var p = (100 / userPerLine) / 2;
       $("#line" + lineCnt).find(".videoplaceholder").css({ "left": p + "%" })
@@ -280,7 +302,7 @@ function updateUserLayout() {
 function joinRoom() {
   //Only join the room if local media is active!
   var roomname = getUrlParam("roomname", "unknown");
-  socket.emit("joinRoom", { roomname: roomname, username: orgUserName }, function () {
+  socket.emit("joinRoom", { roomname: roomname, username: username }, function () {
     console.log("joined room", roomname)
   });
 }

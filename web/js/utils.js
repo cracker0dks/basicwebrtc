@@ -3,7 +3,9 @@ function getUrlParam(parameter, defaultvalue) {
     if (window.location.href.indexOf(parameter) > -1) {
         urlparameter = getUrlVars()[parameter];
     }
-    return decodeURIComponent(urlparameter);
+    let ret = decodeURIComponent(urlparameter);
+    ret = ret == "false" ? false : ret;
+    return ret;
 }
 
 function getUrlVars() {
