@@ -1,3 +1,5 @@
+const API_VERSION = 1.0
+
 var subdir = window.location.pathname.endsWith("/") ? window.location.pathname : window.location.pathname + "/";
 
 var base64Domain = getUrlParam("base64domain", false);
@@ -9,7 +11,7 @@ var camOnAtStart = getUrlParam("camon", false) ? true : false; //Defines if cam 
 var username = getUrlParam("username", "NA");
 var roomname = getUrlParam("roomname", "unknown");
 
-if (base64) {
+if (base64Domain) {
   socketDomain = atob(socketDomain);
 }
 
@@ -30,6 +32,14 @@ var camActive = false;
 
 socket.on("connect", function () {
   socketConnected = true;
+
+  
+  socket.on("API_VERSION", function (serverAPI_VERSION) {
+    if(API_VERSION != serverAPI_VERSION) {
+      alert("SERVER has a different API Version (Client: v"+API_VERSION+" Server: v"+serverAPI_VERSION+")! This can cause problems, so be warned!")
+    }
+  })
+
   socket.on("signaling", function (data) {
     var signalingData = data.signalingData;
     var fromSocketId = data.fromSocketId;

@@ -7,6 +7,9 @@
 //Define https & websocket Port
 const HTTPS_PORT = 3001;
 
+//Define API Version
+const API_VERSION = 1.0;
+
 //Get dummy cert files for https
 var fs = require('fs');
 var privateKey = fs.readFileSync('./cert/key.pem');
@@ -36,6 +39,8 @@ console.log("--------------------------------------------");
 
 //Listen for IO connections and do signaling
 ioServer.sockets.on('connection', function (socket) {
+    socket.emit('API_VERSION', API_VERSION);
+
     let roomOfUser = null;
     let nameOfUser = "NA";
     console.log("NEW USER!");
