@@ -14,8 +14,7 @@ if (socketDomain) {
   socket = subdir == "/" ? io() : io("", { "path": subdir + "/socket.io" }); //Connect to socketIo even on subpaths
 }
 
-
-var username = getUrlParam("username", "NA")
+var orgUserName = getUrlParam("username", "NA");
 var webRTCConfig = {};
 
 var allUserStreams = {};
@@ -65,11 +64,10 @@ socket.on("connect", function () {
 
     var audioTracks = stream.getAudioTracks();
 
-    username = username == "NA" ? socket.id.substr(0, 2).toUpperCase() : username.substr(0, 2).toUpperCase()
     if (audioTracks.length >= 1) {
       allUserStreams[socket.id] = {
         audiostream: stream,
-        username: username
+        username: orgUserName
       }
     }
 
@@ -216,9 +214,9 @@ function updateUserLayout() {
   for (var i in allUserStreams) {
     var userStream = allUserStreams[i];
     streamCnt++;
-    var uDisplay = userStream["username"] ? userStream["username"] : i.substr(0, 2).toUpperCase();
+    var uDisplay = userStream["username"] && userStream["username"]!= "NA" ? userStream["username"].substr(0, 2).toUpperCase() : i.substr(0, 2).toUpperCase();
     var userDiv = $('<div class="videoplaceholder" style="background:rgb(71, 71, 71); position:relative;" id="' + i + '">' +
-      '<div style="width:100%; height:100%; border: 1px solid gray; overflow:hidden; background: #474747;">' +
+      '<div style="width:100%; height:100%; border: 1px solid gray; position:absolute; overflow:hidden; background: #474747;">' +
       '<div class="userPlaceholder">' + uDisplay + '</div>' +
       '</div>' +
       '</div>')
@@ -236,7 +234,12 @@ function updateUserLayout() {
       if(i == socket.id) {
         mirrorStyle = "transform: scaleX(-1);"
       }
-      userDiv.append('<div id="video' + i + '" style="'+mirrorStyle+' position: absolute; top: 0px; width: 101%;"><video autoplay muted></video></div>');
+      userDiv.append('<div style="position: absolute; width: 100%;"><div id="video' + i + '" style="'+mirrorStyle+' top: 0px; width: 101%;">'+
+      '<video autoplay muted></video>'+
+      
+      '</div>'+
+      '<div style="position: absolute; color: white; bottom: 7px; left: 7px; font-size: 1.7em;">'+(userStream["username"].charAt(0).toUpperCase() + userStream["username"].slice(1))+'</div>'+
+      '</div>');
       userDiv.find("video")[0].srcObject = userStream["videostream"];
     }
 
@@ -277,7 +280,7 @@ function updateUserLayout() {
 function joinRoom() {
   //Only join the room if local media is active!
   var roomname = getUrlParam("roomname", "unknown");
-  socket.emit("joinRoom", { roomname: roomname, username: username }, function () {
+  socket.emit("joinRoom", { roomname: roomname, username: orgUserName }, function () {
     console.log("joined room", roomname)
   });
 }
