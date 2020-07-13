@@ -152,7 +152,11 @@ $(document).ready(function () {
   });
 
   $("#cancelCallBtn").click(function () {
-    alert("Please close this window / tab!");
+    if (window.x_extended && typeof window.x_extended.close === "function") {
+      window.x_extended.close()
+    } else {
+      alert("Please close this window / tab!");
+    }
   })
 })
 
