@@ -9,9 +9,23 @@ function getUrlParam(parameter, defaultvalue) {
 }
 
 function getUrlVars() {
-    var vars = {};
-    var parts = window.location.href.replace(/[?&]+([^=&]+)=([^&]*)/gi, function (m, key, value) {
-        vars[key] = value;
-    });
-    return vars;
+    const parseVars = (str) => {
+        if(str.length <= 1){
+            return {}
+        }
+        const keyValuePairs  = str.substring(1).split("&")
+        const res = {}
+        for (let i = 0; i < keyValuePairs.length; i++) {
+            const keyValuePair = keyValuePairs[i];
+            const [key, value] = keyValuePair.split('=')
+            res[key] = value
+        }
+        return res
+    }
+
+    return Object.assign(
+        {},
+        parseVars(window.location.search),
+        parseVars(window.location.hash)
+    )
 }
