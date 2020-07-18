@@ -13,6 +13,7 @@ var roomname = getUrlParam("roomname", "unknown");
 
 if (base64Domain) {
   socketDomain = atob(socketDomain);
+  subdir = atob(subdir);
 }
 
 var socket;
