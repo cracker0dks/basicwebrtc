@@ -317,6 +317,7 @@ function updateUserLayout() {
     var w = $(this).width();
     var h = $(this).height();
     $(this).find("video").css({"max-width" : w+'px', "max-height" : h+'px'})
+    $(this).find("video")[0].play();
   })
 }
 
