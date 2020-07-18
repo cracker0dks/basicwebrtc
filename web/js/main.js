@@ -38,6 +38,10 @@ var micMuted = false;
 var camActive = false;
 var screenActive = false;
 
+socket.on('connect_failed', function() {
+  alert("Connection to socketserver failed! Please check the logs!")
+});
+
 socket.on("connect", function () {
   socketConnected = true;
 
