@@ -40,11 +40,11 @@ var screenActive = false;
 
 socket.on('connect_failed', function() {
   alert("Connection to socketserver failed! Please check the logs!")
+  socketConnected = false;
 });
 
 socket.on("connect", function () {
   socketConnected = true;
-
 
   socket.on("API_VERSION", function (serverAPI_VERSION) {
     if (API_VERSION != serverAPI_VERSION) {
@@ -270,12 +270,10 @@ function createRemoteSocket(initiator, socketId) {
   });
   pcs[socketId].on("streamremoved", function (stream, kind) {
     console.log("STREAMREMOVED!")
-
     if (kind == "video") {
       delete allUserStreams[socketId]["videostream"];
       updateUserLayout();
     }
-
   });
   pcs[socketId].on("closed", function (stream) {
     delete allUserStreams[socketId];
@@ -283,13 +281,15 @@ function createRemoteSocket(initiator, socketId) {
     updateUserLayout();
     console.log("disconnected!");
   });
-
   pcs[socketId].on("connect", function () {
     if (allUserStreams[socket.id]["videostream"]) {
       setTimeout(function () {
         pcs[socketId].addStream(allUserStreams[socket.id]["videostream"])
       }, 500)
     }
+  });
+  pcs[socketId].on("iceFailed", function () {
+    console.log("Error: Ice failed to to socketId: ", socketId);
   });
 }
 
