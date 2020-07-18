@@ -33,10 +33,10 @@ var camActive = false;
 socket.on("connect", function () {
   socketConnected = true;
 
-  
+
   socket.on("API_VERSION", function (serverAPI_VERSION) {
-    if(API_VERSION != serverAPI_VERSION) {
-      alert("SERVER has a different API Version (Client: v"+API_VERSION+" Server: v"+serverAPI_VERSION+")! This can cause problems, so be warned!")
+    if (API_VERSION != serverAPI_VERSION) {
+      alert("SERVER has a different API Version (Client: v" + API_VERSION + " Server: v" + serverAPI_VERSION + ")! This can cause problems, so be warned!")
     }
   })
 
@@ -240,14 +240,16 @@ function updateUserLayout() {
     streamCnt++;
     console.log(userStream["username"])
     var uDisplay = userStream["username"] && userStream["username"] != "NA" ? userStream["username"].substr(0, 2).toUpperCase() : i.substr(0, 2).toUpperCase();
-    var userDiv = $('<div class="videoplaceholder" style="background:rgb(71, 71, 71); position:relative;" id="' + i + '">' +
-      '<div style="width:100%; height:100%; border: 1px solid gray; position:absolute; overflow:hidden; background: #474747;">' +
+    var userDiv = $('<div class="videoplaceholder" style="position:relative;" id="' + i + '">' +
+      '<div class="userPlaceholderContainer" style="width:100%; height:100%; position:absolute; overflow:hidden; background: #474747;">' +
       '<div class="userPlaceholder">' + uDisplay + '</div>' +
       '</div>' +
       '</div>')
 
+    console.log(userStream)
+
     if (userStream["audiostream"] && i !== socket.id) {
-      if ($("#audioStreams").find('audio' + i).length == 0) {
+      if ($("#audioStreams").find('#audio' + i).length == 0) {
         let audioDiv = $('<div id="audio' + i + '" style="display:none;"><audio autoplay></audio></div>');
         audioDiv.find("audio")[0].srcObject = userStream["audiostream"];
         $("#audioStreams").append(audioDiv);
@@ -261,13 +263,14 @@ function updateUserLayout() {
       }
       var userDisplayName = userStream["username"] && userStream["username"] != "NA" ? (userStream["username"].charAt(0).toUpperCase() + userStream["username"].slice(1)) : i.substr(0, 2).toUpperCase();
       userDiv.append(
-        '<div style="position: absolute; color: white; bottom: 7px; right: 7px; font-size: 1.7em;">' + userDisplayName + '</div>' +
-        '<div style="position: absolute; width: 100%;"><div id="video' + i + '" style="' + mirrorStyle + ' top: 0px; width: 101%;">' +
-        '<video autoplay muted></video>' +
+        '<div class="userCont" style="position: absolute; width: 100%; height: 100%;">' +
+        '<div id="video' + i + '" style="top: 0px; width: 100%;">' +
+        '<div style="position: absolute; color: white; top: 7px; left: 7px; font-size: 1.3em; z-index:10; text-shadow: 1px 0 0 #000, 0 -1px 0 #000, 0 1px 0 #000, -1px 0 0 #000;">' + userDisplayName + '</div>' +
+        '<video style="' + mirrorStyle + '" autoplay muted></video>' +
         '</div>' +
-        
         '</div>');
       userDiv.find("video")[0].srcObject = userStream["videostream"];
+      userDiv.find(".userPlaceholderContainer").hide();
     }
 
     allUserDivs[i] = userDiv;
@@ -277,14 +280,15 @@ function updateUserLayout() {
 
   if (streamCnt == 2) { //Display 2 users side by side
     for (var i in allUserDivs) {
-      if(i == socket.id) {
-        allUserDivs[i].css({ width: '20%', height: '30%', position: 'absolute', left : '20px', bottom : '30px', 'z-index' : '1' });
+      if (i == socket.id) {
+        allUserDivs[i].css({ width: '20%', height: '30%', position: 'absolute', left: '20px', bottom: '30px', 'z-index': '1' });
       } else {
         allUserDivs[i].css({ width: '100%', height: '100%', float: 'left' });
       }
-      
+
       $("#mediaDiv").append(allUserDivs[i])
     }
+
   } else {
     var lineCnt = Math.round(Math.sqrt(streamCnt));
     for (var i = 1; i < lineCnt + 1; i++) {
@@ -307,6 +311,12 @@ function updateUserLayout() {
       $("#line" + lineCnt).find(".videoplaceholder").css({ "left": p + "%" })
     }
   }
+
+  $.each($(".userCont"), function() {
+    var w = $(this).width();
+    var h = $(this).height();
+    $(this).find("video").css({"max-width" : w+'px', "max-height" : h+'px'})
+  })
 }
 
 function joinRoom() {
@@ -316,3 +326,14 @@ function joinRoom() {
     console.log("joined room", roomname)
   });
 }
+
+var resizeTimeout = null;
+window.onresize = function(event) {
+  if(resizeTimeout) {
+    clearTimeout(resizeTimeout);
+  }
+
+  resizeTimeout = setTimeout(function() {
+    updateUserLayout();
+  }, 2000)
+};
