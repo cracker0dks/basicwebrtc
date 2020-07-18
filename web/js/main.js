@@ -240,6 +240,9 @@ function gotRemoteStream(stream, socketId) {
 };
 
 function updateUserLayout() {
+  if (document.fullscreenElement) { //Dont do things on fullscreen
+    return;
+  }
   var streamCnt = 0;
   var allUserDivs = {};
   for (var i in allUserStreams) {
@@ -278,6 +281,13 @@ function updateUserLayout() {
         '</div>');
       userDiv.find("video")[0].srcObject = userStream["videostream"];
       userDiv.find(".userPlaceholderContainer").hide();
+
+      if (i != socket.id) {
+        userDiv.find("video").css({"cursor": "pointer"})
+        userDiv.find("video").click(function () {
+          openFullscreen(this);
+        })
+      }
     }
 
     allUserDivs[i] = userDiv;
@@ -345,3 +355,15 @@ window.onresize = function (event) {
     updateUserLayout();
   }, 2000)
 };
+
+function openFullscreen(elem) {
+  if (elem.requestFullscreen) {
+    elem.requestFullscreen();
+  } else if (elem.mozRequestFullScreen) { /* Firefox */
+    elem.mozRequestFullScreen();
+  } else if (elem.webkitRequestFullscreen) { /* Chrome, Safari and Opera */
+    elem.webkitRequestFullscreen();
+  } else if (elem.msRequestFullscreen) { /* IE/Edge */
+    elem.msRequestFullscreen();
+  }
+}
