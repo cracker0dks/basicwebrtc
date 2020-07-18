@@ -5,19 +5,25 @@ var subdir = window.location.pathname.endsWith("/") ? window.location.pathname :
 var base64Domain = getUrlParam("base64domain", false);
 
 //ALL GET PARAMETERS
-subdir = getUrlParam("subdir", subdir); //Subdir on the server
 var socketDomain = getUrlParam("socketdomain", false); //Domainname with path
 var camOnAtStart = getUrlParam("camon", false) ? true : false; //Defines if cam should be on at start
 var username = getUrlParam("username", "NA");
 var roomname = getUrlParam("roomname", "unknown");
 
-if (base64Domain) {
+if (base64Domain && socketDomain) {
   socketDomain = atob(socketDomain);
-  subdir = atob(subdir);
 }
 
 var socket;
 if (socketDomain) {
+  socketDomain = socketDomain.replace('https://', '').replace('http://', '').split("#")[0];
+  var domainSplit = socketDomain.split('/');
+  socketDomain = 'https://' + domainSplit[0];
+  domainSplit.shift();
+  subdir = '/' + domainSplit.join('/');
+  subdir = subdir.endsWith('/') ? subdir : subdir + '/';
+  console.log('socketDomain', socketDomain);
+  console.log('subdir', subdir);
   socket = io(socketDomain, { "path": subdir + "socket.io" })
 } else {
   socket = subdir == "/" ? io() : io("", { "path": subdir + "/socket.io" }); //Connect to socketIo even on subpaths
@@ -313,10 +319,10 @@ function updateUserLayout() {
     }
   }
 
-  $.each($(".userCont"), function() {
+  $.each($(".userCont"), function () {
     var w = $(this).width();
     var h = $(this).height();
-    $(this).find("video").css({"max-width" : w+'px', "max-height" : h+'px'})
+    $(this).find("video").css({ "max-width": w + 'px', "max-height": h + 'px' })
     $(this).find("video")[0].play();
   })
 }
@@ -330,12 +336,12 @@ function joinRoom() {
 }
 
 var resizeTimeout = null;
-window.onresize = function(event) {
-  if(resizeTimeout) {
+window.onresize = function (event) {
+  if (resizeTimeout) {
     clearTimeout(resizeTimeout);
   }
 
-  resizeTimeout = setTimeout(function() {
+  resizeTimeout = setTimeout(function () {
     updateUserLayout();
   }, 2000)
 };
