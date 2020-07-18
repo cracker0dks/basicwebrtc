@@ -36,6 +36,7 @@ var pcs = {}; //Peer connections to all remotes
 var socketConnected = false;
 var micMuted = false;
 var camActive = false;
+var screenActive = false;
 
 socket.on("connect", function () {
   socketConnected = true;
@@ -133,7 +134,74 @@ $(document).ready(function () {
     micMuted = !micMuted;
   })
 
+
+  $("#addRemoveScreenBtn").click(async function () {
+    if (camActive) {
+      $("#addRemoveCameraBtn").click();
+    }
+    if (!screenActive) {
+      $("#addRemoveScreenBtn").css({ color: "#030356" });
+      
+      var config = {
+				screen: true
+      };
+      
+      try {
+        stream = await _startScreenCapture();
+        for (var i in pcs) { //Add stream to all peers
+          pcs[i].addStream(stream);
+        }
+
+        console.log('getUserMedia success! Stream: ', stream);
+        console.log('LocalStream', stream.getVideoTracks());
+
+        var videoTracks = stream.getVideoTracks();
+
+        if (videoTracks.length >= 1) {
+          allUserStreams[socket.id] = allUserStreams[socket.id] ? allUserStreams[socket.id] : {};
+          allUserStreams[socket.id]["videostream"] = stream;
+        }
+
+        if (videoTracks.length > 0) {
+          console.log('Using video device: ' + videoTracks[0].label);
+        }
+
+        updateUserLayout();
+        screenActive = true;
+      } catch (e) {
+        console.log('getUserMedia error! Got this error: ', e);
+        alert("Could not get your Screen!")
+        $("#addRemoveScreenBtn").css({ color: "black" });
+        return;
+      }
+
+      function _startScreenCapture() {
+        if (navigator.getDisplayMedia) {
+          return navigator.getDisplayMedia(config);
+        } else if (navigator.mediaDevices.getDisplayMedia) {
+          return navigator.mediaDevices.getDisplayMedia(config);
+        } else {
+          return navigator.mediaDevices.getUserMedia(config);
+        }
+      }
+
+    } else {
+      $("#addRemoveScreenBtn").css({ color: "black" });
+      for (var i in pcs) { //remove stream from all peers
+        pcs[i].removeStream(allUserStreams[socket.id]["videostream"]);
+      }
+      delete allUserStreams[socket.id]["videostream"];
+      socket.emit('removeCamera', true)
+      updateUserLayout();
+      screenActive = false;
+    }
+  });
+
   $("#addRemoveCameraBtn").click(function () {
+    if(screenActive) {
+      $("#addRemoveScreenBtn").click();
+    }
+
     if (!camActive) {
       $("#addRemoveCameraBtn").css({ color: "#030356" });
       navigator.getUserMedia({
@@ -268,7 +336,7 @@ function updateUserLayout() {
 
     if (userStream["videostream"]) {
       var mirrorStyle = ""
-      if (i == socket.id) {
+      if (i == socket.id && !screenActive) {
         mirrorStyle = "transform: scaleX(-1);"
       }
       var userDisplayName = userStream["username"] && userStream["username"] != "NA" ? (userStream["username"].charAt(0).toUpperCase() + userStream["username"].slice(1)) : i.substr(0, 2).toUpperCase();
@@ -283,7 +351,7 @@ function updateUserLayout() {
       userDiv.find(".userPlaceholderContainer").hide();
 
       if (i != socket.id) {
-        userDiv.find("video").css({"cursor": "pointer"})
+        userDiv.find("video").css({ "cursor": "pointer" })
         userDiv.find("video").click(function () {
           openFullscreen(this);
         })
