@@ -38,7 +38,7 @@ var micMuted = false;
 var camActive = false;
 var screenActive = false;
 
-socket.on('connect_failed', function() {
+socket.on('connect_failed', function () {
   alert("Connection to socketserver failed! Please check the logs!")
   socketConnected = false;
 });
@@ -145,33 +145,68 @@ $(document).ready(function () {
     }
     if (!screenActive) {
       $("#addRemoveScreenBtn").css({ color: "#030356" });
-      
+
       var config = {
-				screen: true
+        screen: true
       };
-      
+
       try {
-        stream = await _startScreenCapture();
-        for (var i in pcs) { //Add stream to all peers
-          pcs[i].addStream(stream);
+        if (window.x_extended && window.x_extended.desktopCapturer) {
+          var desktopCapturer = window.x_extended.desktopCapturer;
+          desktopCapturer.getSources({ types: ['window', 'screen'] }).then(async sources => {
+            for (const source of sources) {
+              if (source.name === 'Electron') {
+                try {
+                  const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: false,
+                    video: {
+                      mandatory: {
+                        chromeMediaSource: 'desktop',
+                        chromeMediaSourceId: source.id,
+                        minWidth: 1280,
+                        maxWidth: 1280,
+                        minHeight: 720,
+                        maxHeight: 720
+                      }
+                    }
+                  })
+                  handleScreenStream(stream)
+                } catch (e) {
+                  handleError(e)
+                }
+                return
+              }
+            }
+          })
+
+        } else {
+          stream = await _startScreenCapture();
+          handleScreenStream(stream)
         }
 
-        console.log('getUserMedia success! Stream: ', stream);
-        console.log('LocalStream', stream.getVideoTracks());
+        async function handleScreenStream(stream) {
+          for (var i in pcs) { //Add stream to all peers
+            pcs[i].addStream(stream);
+          }
 
-        var videoTracks = stream.getVideoTracks();
+          console.log('getUserMedia success! Stream: ', stream);
+          console.log('LocalStream', stream.getVideoTracks());
 
-        if (videoTracks.length >= 1) {
-          allUserStreams[socket.id] = allUserStreams[socket.id] ? allUserStreams[socket.id] : {};
-          allUserStreams[socket.id]["videostream"] = stream;
+          var videoTracks = stream.getVideoTracks();
+
+          if (videoTracks.length >= 1) {
+            allUserStreams[socket.id] = allUserStreams[socket.id] ? allUserStreams[socket.id] : {};
+            allUserStreams[socket.id]["videostream"] = stream;
+          }
+
+          if (videoTracks.length > 0) {
+            console.log('Using video device: ' + videoTracks[0].label);
+          }
+
+          updateUserLayout();
+          screenActive = true;
         }
 
-        if (videoTracks.length > 0) {
-          console.log('Using video device: ' + videoTracks[0].label);
-        }
-
-        updateUserLayout();
-        screenActive = true;
       } catch (e) {
         console.log('getUserMedia error! Got this error: ', e);
         alert("Could not get your Screen!")
@@ -202,7 +237,7 @@ $(document).ready(function () {
   });
 
   $("#addRemoveCameraBtn").click(function () {
-    if(screenActive) {
+    if (screenActive) {
       $("#addRemoveScreenBtn").click();
     }
 
