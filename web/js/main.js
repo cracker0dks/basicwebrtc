@@ -155,7 +155,7 @@ $(document).ready(function () {
           var desktopCapturer = window.x_extended.desktopCapturer;
           desktopCapturer.getSources({ types: ['window', 'screen'] }).then(async sources => {
             for (const source of sources) {
-              if (source.name === 'Electron') {
+              if (source.name === 'Screen 1') {
                 try {
                   const stream = await navigator.mediaDevices.getUserMedia({
                     audio: false,
