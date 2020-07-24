@@ -8,7 +8,12 @@ var base64Domain = getUrlParam("base64domain", false);
 var socketDomain = getUrlParam("socketdomain", false); //Domainname with path
 var camOnAtStart = getUrlParam("camon", false) ? true : false; //Defines if cam should be on at start
 var username = getUrlParam("username", "NA");
-var roomname = getUrlParam("roomname", "unknown");
+var roomname = getUrlParam("roomname", false);
+
+if(!roomname) {
+  roomname = "r"+Math.random().toString().replace(".", "")
+  window.location = location.href+"#roomname="+roomname
+}
 
 if (base64Domain && socketDomain) {
   socketDomain = atob(socketDomain);
