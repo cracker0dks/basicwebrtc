@@ -311,7 +311,7 @@ $(document).ready(function () {
     if (window.x_extended && typeof window.x_extended.close === "function") { //Close window if we run in electron app
       window.x_extended.close()
     } else {
-      alert("Please close this window / tab!");
+      location = "/endcall.html";
     }
   })
 })
