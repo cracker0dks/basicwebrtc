@@ -96,7 +96,7 @@ socket.on("connect", function () {
     }, function (stream) { //OnSuccess
       startUserMedia()
     }, function (error) { //OnError
-      alert("Could not get your Camera / Mic!")
+      startUserMedia()
       console.log('getUserMedia error! Got this error: ', error);
     });
   } else {
@@ -132,14 +132,11 @@ socket.on("connect", function () {
         }, 1000)
       }
     }, function (error) { //OnError
-      alert("Could not get your Camera / Mic!")
+      alert("Could not get your Mic! You need at least one Mic!")
       console.log('getUserMedia error! Got this error: ', error);
     });
   }
-
 });
-
-
 
 $(window).on("beforeunload", function () {
   if (socketConnected) {
@@ -293,7 +290,7 @@ $(document).ready(function () {
         updateUserLayout();
         camActive = true;
       }, function (error) { //OnError
-        alert("Could not get your Camera!")
+        alert("Could not get your Camera! Be sure you have one connected and it is not used by any other process!")
         console.log('getUserMedia error! Got this error: ', error);
         $("#addRemoveCameraBtn").css({ color: "black" });
       });
