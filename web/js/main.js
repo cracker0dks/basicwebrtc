@@ -10,14 +10,16 @@ var camOnAtStart = getUrlParam("camon", false) ? true : false; //Defines if cam 
 var username = getUrlParam("username", "NA");
 var roomname = getUrlParam("roomname", false);
 
-if(!roomname) {
-  roomname = "r"+Math.random().toString().replace(".", "")
-  window.location = location.href+"#roomname="+roomname
+if (!roomname) {
+  roomname = "r" + Math.random().toString().replace(".", "")
+  window.location = location.href + "#roomname=" + roomname
 }
 
 if (base64Domain && socketDomain) {
   socketDomain = atob(socketDomain);
 }
+
+
 
 var socket;
 if (socketDomain) {
@@ -87,39 +89,57 @@ socket.on("connect", function () {
     webRTCConfig["iceServers"] = newIceServers;
   })
 
-  navigator.getUserMedia({
-    video: false, // { 'facingMode': "user" }
-    audio: { 'echoCancellation': true, 'noiseSuppression': true }
-  }, function (stream) { //OnSuccess
-    webRTCConfig["stream"] = stream;
-    console.log('getUserMedia success! Stream: ', stream);
+  if (camOnAtStart) {
+    navigator.getUserMedia({
+      video: true,
+      audio: true
+    }, function (stream) { //OnSuccess
+      startUserMedia()
+    }, function (error) { //OnError
+      alert("Could not get your Camera / Mic!")
+      console.log('getUserMedia error! Got this error: ', error);
+    });
+  } else {
+    startUserMedia()
+  }
 
-    var audioTracks = stream.getAudioTracks();
+  function startUserMedia() {
+    navigator.getUserMedia({
+      video: false, // { 'facingMode': "user" }
+      audio: { 'echoCancellation': true, 'noiseSuppression': true }
+    }, function (stream) { //OnSuccess
+      webRTCConfig["stream"] = stream;
+      console.log('getUserMedia success! Stream: ', stream);
 
-    if (audioTracks.length >= 1) {
-      allUserStreams[socket.id] = {
-        audiostream: stream,
-        username: username
+      var audioTracks = stream.getAudioTracks();
+
+      if (audioTracks.length >= 1) {
+        allUserStreams[socket.id] = {
+          audiostream: stream,
+          username: username
+        }
       }
-    }
 
-    if (audioTracks.length > 0) {
-      console.log('Using audio device: ' + audioTracks[0].label);
-    }
+      if (audioTracks.length > 0) {
+        console.log('Using audio device: ' + audioTracks[0].label);
+      }
 
-    joinRoom();
-    updateUserLayout();
-    if (camOnAtStart) { //enable cam on start if set
-      setTimeout(function () {
-        $("#addRemoveCameraBtn").click();
-      }, 1000)
-    }
-  }, function (error) { //OnError
-    alert("Could not get your Camera / Mic!")
-    console.log('getUserMedia error! Got this error: ', error);
-  });
+      joinRoom();
+      updateUserLayout();
+      if (camOnAtStart) { //enable cam on start if set
+        setTimeout(function () {
+          $("#addRemoveCameraBtn").click();
+        }, 1000)
+      }
+    }, function (error) { //OnError
+      alert("Could not get your Camera / Mic!")
+      console.log('getUserMedia error! Got this error: ', error);
+    });
+  }
 
 });
+
+
 
 $(window).on("beforeunload", function () {
   if (socketConnected) {
