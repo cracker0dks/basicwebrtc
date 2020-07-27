@@ -144,6 +144,66 @@ $(window).on("beforeunload", function () {
   }
 })
 
+document.addEventListener('keydown', ev => {
+  if(ev.key === "Escape") {
+    const screenshareDialog = document.querySelector('div.screenshare-select-dialog-backdrop')
+    if(!screenshareDialog.hidden) {
+      const cancelButton = screenshareDialog.querySelector('#cancel-screenshare-select')
+      cancelButton.click()
+    }
+  }
+})
+
+/**
+ * @returns Promise<stream id to share>
+ */
+async function electron_select_screen_to_share(sources){
+  const screenshareDialog = document.querySelector('div.screenshare-select-dialog-backdrop')
+  
+  let fail, success;
+  const resultPromise =  new Promise((resolve, reject) => {
+    fail = reject
+    success = resolve
+  })
+
+  const options = screenshareDialog.querySelector("div.screenshare-options")
+  // remove old options
+  while (options.firstChild) {
+    options.removeChild(options.firstChild);
+  }
+  const closeCallback = (screenid) => {
+    screenshareDialog.hidden = true
+    success(screenid)
+  }
+  // add new options
+  for (let source of sources) {
+    console.log(source)
+    const option = document.createElement('div')
+    option.classList.add('screenshare-option')
+    const thumbnail = document.createElement('img')
+    thumbnail.classList.add('thumbnail')
+    //thumbnail.style = 'background-image: url(' + source.thumbnail.toDataURL() + ');'
+    thumbnail.src = source.thumbnail.toDataURL()
+    thumbnail.title = source.id
+    option.appendChild(thumbnail)
+    const name = document.createElement('p')
+    name.innerText = source.name
+    name.title = source.name
+    option.appendChild(name)
+    option.onclick = closeCallback.bind(null, source.id)
+    options.appendChild(option)
+  }
+ 
+  const cancelButton = screenshareDialog.querySelector('#cancel-screenshare-select')
+  cancelButton.onclick = _ => {
+    screenshareDialog.hidden = true
+    fail(new Error("User canceled"))
+  }
+  
+  screenshareDialog.hidden = false
+  return resultPromise
+}
+
 $(document).ready(function () {
   $("#muteUnmuteMicBtn").click(function () {
     if (!micMuted) {
@@ -176,28 +236,26 @@ $(document).ready(function () {
         if (window.x_extended && window.x_extended.desktopCapturer) {
           var desktopCapturer = window.x_extended.desktopCapturer;
           desktopCapturer.getSources({ types: ['window', 'screen'] }).then(async sources => {
-            for (const source of sources) {
-              if (source.name === 'Screen 1') {
-                try {
-                  const stream = await navigator.mediaDevices.getUserMedia({
-                    audio: false,
-                    video: {
-                      mandatory: {
-                        chromeMediaSource: 'desktop',
-                        chromeMediaSourceId: source.id,
-                        minWidth: 1280,
-                        maxWidth: 1280,
-                        minHeight: 720,
-                        maxHeight: 720
-                      }
-                    }
-                  })
-                  handleScreenStream(stream)
-                } catch (e) {
-                  handleError(e)
+            try {
+              const sourceid = await electron_select_screen_to_share(sources)
+              const source = sources.find(({id}) => id == sourceid)
+              const stream = await navigator.mediaDevices.getUserMedia({
+                audio: false,
+                video: {
+                  mandatory: {
+                    chromeMediaSource: 'desktop',
+                    chromeMediaSourceId: source.id,
+                    minWidth: 1280,
+                    maxWidth: 1280,
+                    minHeight: 720,
+                    maxHeight: 720
+                  }
                 }
-                return
-              }
+              })
+              handleScreenStream(stream)
+            } catch (e) {
+              console.error(e)
+              handleError(e)
             }
           })
 

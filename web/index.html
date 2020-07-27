@@ -14,6 +14,24 @@
 </head>
 
 <body>
+  <div class="screenshare-select-dialog-backdrop" hidden>
+    <div class="screenshare-select-dialog">
+      <p>
+        Screenshare: select a screen to share
+      </p>
+      <div class="screenshare-options">
+        <!--
+        <div class="screenshare-option">
+          <div class="thumbnail" style="background:radial-gradient(black,white)"></div>
+          <p>
+            screen X
+          </p>
+        </div>
+        -->
+      </div>
+      <button id="cancel-screenshare-select">Cancel</button>
+    </div>
+  </div>
   <div id="mediaDiv"></div>  
   <div style="position: fixed; bottom: 0px; height: 100px; width: 100%; text-align: center; font-size: 2.5em;" id="mediaControllContainer">
     <div style="width: 360px; margin-left: auto; margin-right: auto; background: #ffffff3b; border-radius: 5px;" id="mediaControll">
