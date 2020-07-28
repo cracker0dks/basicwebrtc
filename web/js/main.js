@@ -1,4 +1,7 @@
-const API_VERSION = 1.0
+const API_VERSION = 1.1;
+
+const MY_UUID = uuidv4();
+const MY_UUID_KEY = uuidv4();
 
 var subdir = window.location.pathname.endsWith("/") ? window.location.pathname : window.location.pathname + "/";
 
@@ -20,9 +23,9 @@ if (base64Domain && socketDomain) {
 }
 
 var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-if(isMobile) {
+if (isMobile) {
   $("#screenBtnContainer").hide();
-  $("#mediaControll").css({width: "270px"})
+  $("#mediaControll").css({ width: "270px" })
 }
 
 var socket;
@@ -57,89 +60,99 @@ socket.on('connect_failed', function () {
 socket.on("connect", function () {
   socketConnected = true;
 
-  socket.on("API_VERSION", function (serverAPI_VERSION) {
-    if (API_VERSION != serverAPI_VERSION) {
-      alert("SERVER has a different API Version (Client: v" + API_VERSION + " Server: v" + serverAPI_VERSION + ")! This can cause problems, so be warned!")
+  socket.emit("registerUUID", { "UUID": MY_UUID, "UUID_KEY": MY_UUID_KEY }, function (err, alreadyRegistered) {
+    if (err) {
+      return console.log(err)
     }
-  })
 
-  socket.on("signaling", function (data) {
-    var signalingData = data.signalingData;
-    var fromSocketId = data.fromSocketId;
-    if (!pcs[fromSocketId]) {
-      createRemoteSocket(false, fromSocketId)
+    if(alreadyRegistered) {
+      return console.log("We are alreadyregistered so don't do it again!")
     }
-    pcs[fromSocketId].signaling(signalingData);
-
-    if (data.username) {
-      allUserStreams[fromSocketId] = allUserStreams[fromSocketId] ? allUserStreams[fromSocketId] : {};
-      allUserStreams[fromSocketId]["username"] = data.username;
-    }
-  })
-
-  socket.on("userJoined", function (content) {
-    var userSocketId = content["socketId"];
-    createRemoteSocket(true, userSocketId)
-  })
-
-  socket.on("userDiscconected", function (userSocketId) {
-    delete allUserStreams[userSocketId];
-    $('audio' + userSocketId).remove();
-    updateUserLayout();
-  })
-
-  socket.on("currentIceServers", function (newIceServers) {
-    console.log("got newIceServers", newIceServers)
-    webRTCConfig["iceServers"] = newIceServers;
-  })
-
-  if (camOnAtStart) {
-    navigator.getUserMedia({
-      video: true,
-      audio: true
-    }, function (stream) { //OnSuccess
-      startUserMedia()
-    }, function (error) { //OnError
-      startUserMedia()
-      console.log('getUserMedia error! Got this error: ', error);
-    });
-  } else {
-    startUserMedia()
-  }
-
-  function startUserMedia() {
-    navigator.getUserMedia({
-      video: false, // { 'facingMode': "user" }
-      audio: { 'echoCancellation': true, 'noiseSuppression': true }
-    }, function (stream) { //OnSuccess
-      webRTCConfig["stream"] = stream;
-      console.log('getUserMedia success! Stream: ', stream);
-
-      var audioTracks = stream.getAudioTracks();
-
-      if (audioTracks.length >= 1) {
-        allUserStreams[socket.id] = {
-          audiostream: stream,
-          username: username
-        }
+    
+    socket.on("API_VERSION", function (serverAPI_VERSION) {
+      if (API_VERSION != serverAPI_VERSION) {
+        alert("SERVER has a different API Version (Client: v" + API_VERSION + " Server: v" + serverAPI_VERSION + ")! This can cause problems, so be warned!")
       }
+    })
 
-      if (audioTracks.length > 0) {
-        console.log('Using audio device: ' + audioTracks[0].label);
+    socket.on("signaling", function (data) {
+      var signalingData = data.signalingData;
+      var fromUUID = data.fromUUID;
+      if (!pcs[fromUUID]) {
+        createRemoteSocket(false, fromUUID)
       }
+      pcs[fromUUID].signaling(signalingData);
 
-      joinRoom();
+      if (data.username) {
+        allUserStreams[fromUUID] = allUserStreams[fromUUID] ? allUserStreams[fromUUID] : {};
+        allUserStreams[fromUUID]["username"] = data.username;
+      }
+    })
+
+    socket.on("userJoined", function (content) {
+      var userUUID = content["UUID"] || null;
+      createRemoteSocket(true, userUUID)
+    })
+
+    socket.on("userDiscconected", function (userUUID) {
+      delete allUserStreams[userUUID];
+      $('audio' + userUUID).remove();
       updateUserLayout();
-      if (camOnAtStart) { //enable cam on start if set
-        setTimeout(function () {
-          $("#addRemoveCameraBtn").click();
-        }, 1000)
-      }
-    }, function (error) { //OnError
-      alert("Could not get your Mic! You need at least one Mic!")
-      console.log('getUserMedia error! Got this error: ', error);
-    });
-  }
+    })
+
+    socket.on("currentIceServers", function (newIceServers) {
+      console.log("got newIceServers", newIceServers)
+      webRTCConfig["iceServers"] = newIceServers;
+    })
+
+    if (camOnAtStart) {
+      navigator.getUserMedia({
+        video: true,
+        audio: true
+      }, function (stream) { //OnSuccess
+        startUserMedia()
+      }, function (error) { //OnError
+        startUserMedia()
+        console.log('getUserMedia error! Got this error: ', error);
+      });
+    } else {
+      startUserMedia()
+    }
+
+    function startUserMedia() {
+      navigator.getUserMedia({
+        video: false, // { 'facingMode': "user" }
+        audio: { 'echoCancellation': true, 'noiseSuppression': true }
+      }, function (stream) { //OnSuccess
+        webRTCConfig["stream"] = stream;
+        console.log('getUserMedia success! Stream: ', stream);
+
+        var audioTracks = stream.getAudioTracks();
+
+        if (audioTracks.length >= 1) {
+          allUserStreams[MY_UUID] = {
+            audiostream: stream,
+            username: username
+          }
+        }
+
+        if (audioTracks.length > 0) {
+          console.log('Using audio device: ' + audioTracks[0].label);
+        }
+
+        joinRoom();
+        updateUserLayout();
+        if (camOnAtStart) { //enable cam on start if set
+          setTimeout(function () {
+            $("#addRemoveCameraBtn").click();
+          }, 1000)
+        }
+      }, function (error) { //OnError
+        alert("Could not get your Mic! You need at least one Mic!")
+        console.log('getUserMedia error! Got this error: ', error);
+      });
+    }
+  })
 });
 
 $(window).on("beforeunload", function () {
@@ -149,9 +162,9 @@ $(window).on("beforeunload", function () {
 })
 
 document.addEventListener('keydown', ev => {
-  if(ev.key === "Escape") {
+  if (ev.key === "Escape") {
     const screenshareDialog = document.querySelector('div.screenshare-select-dialog-backdrop')
-    if(!screenshareDialog.hidden) {
+    if (!screenshareDialog.hidden) {
       const cancelButton = screenshareDialog.querySelector('#cancel-screenshare-select')
       cancelButton.click()
     }
@@ -161,11 +174,11 @@ document.addEventListener('keydown', ev => {
 /**
  * @returns Promise<stream id to share>
  */
-async function electron_select_screen_to_share(sources){
+async function electron_select_screen_to_share(sources) {
   const screenshareDialog = document.querySelector('div.screenshare-select-dialog-backdrop')
-  
+
   let fail, success;
-  const resultPromise =  new Promise((resolve, reject) => {
+  const resultPromise = new Promise((resolve, reject) => {
     fail = reject
     success = resolve
   })
@@ -197,13 +210,13 @@ async function electron_select_screen_to_share(sources){
     option.onclick = closeCallback.bind(null, source.id)
     options.appendChild(option)
   }
- 
+
   const cancelButton = screenshareDialog.querySelector('#cancel-screenshare-select')
   cancelButton.onclick = _ => {
     screenshareDialog.hidden = true
     fail(new Error("User canceled"))
   }
-  
+
   screenshareDialog.hidden = false
   return resultPromise
 }
@@ -212,13 +225,13 @@ $(document).ready(function () {
   $("#muteUnmuteMicBtn").click(function () {
     if (!micMuted) {
       $("#muteUnmuteMicBtn").html('<i class="fas fa-microphone-alt-slash"></i>');
-      if (allUserStreams[socket.id] && allUserStreams[socket.id]["audiostream"]) {
-        allUserStreams[socket.id]["audiostream"].getAudioTracks()[0].enabled = false;
+      if (allUserStreams[MY_UUID] && allUserStreams[MY_UUID]["audiostream"]) {
+        allUserStreams[MY_UUID]["audiostream"].getAudioTracks()[0].enabled = false;
       }
     } else {
       $("#muteUnmuteMicBtn").html('<i class="fas fa-microphone-alt"></i>');
-      if (allUserStreams[socket.id] && allUserStreams[socket.id]["audiostream"]) {
-        allUserStreams[socket.id]["audiostream"].getAudioTracks()[0].enabled = true;
+      if (allUserStreams[MY_UUID] && allUserStreams[MY_UUID]["audiostream"]) {
+        allUserStreams[MY_UUID]["audiostream"].getAudioTracks()[0].enabled = true;
       }
     }
     micMuted = !micMuted;
@@ -242,17 +255,13 @@ $(document).ready(function () {
           desktopCapturer.getSources({ types: ['window', 'screen'] }).then(async sources => {
             try {
               const sourceid = await electron_select_screen_to_share(sources)
-              const source = sources.find(({id}) => id == sourceid)
+              const source = sources.find(({ id }) => id == sourceid)
               const stream = await navigator.mediaDevices.getUserMedia({
                 audio: false,
                 video: {
                   mandatory: {
                     chromeMediaSource: 'desktop',
-                    chromeMediaSourceId: source.id,
-                    minWidth: 1280,
-                    maxWidth: 1280,
-                    minHeight: 720,
-                    maxHeight: 720
+                    chromeMediaSourceId: source.id
                   }
                 }
               })
@@ -279,8 +288,8 @@ $(document).ready(function () {
           var videoTracks = stream.getVideoTracks();
 
           if (videoTracks.length >= 1) {
-            allUserStreams[socket.id] = allUserStreams[socket.id] ? allUserStreams[socket.id] : {};
-            allUserStreams[socket.id]["videostream"] = stream;
+            allUserStreams[MY_UUID] = allUserStreams[MY_UUID] ? allUserStreams[MY_UUID] : {};
+            allUserStreams[MY_UUID]["videostream"] = stream;
           }
 
           if (videoTracks.length > 0) {
@@ -311,9 +320,9 @@ $(document).ready(function () {
     } else {
       $("#addRemoveScreenBtn").css({ color: "black" });
       for (var i in pcs) { //remove stream from all peers
-        pcs[i].removeStream(allUserStreams[socket.id]["videostream"]);
+        pcs[i].removeStream(allUserStreams[MY_UUID]["videostream"]);
       }
-      delete allUserStreams[socket.id]["videostream"];
+      delete allUserStreams[MY_UUID]["videostream"];
       socket.emit('removeCamera', true)
       updateUserLayout();
       screenActive = false;
@@ -341,8 +350,8 @@ $(document).ready(function () {
         var videoTracks = stream.getVideoTracks();
 
         if (videoTracks.length >= 1) {
-          allUserStreams[socket.id] = allUserStreams[socket.id] ? allUserStreams[socket.id] : {};
-          allUserStreams[socket.id]["videostream"] = stream;
+          allUserStreams[MY_UUID] = allUserStreams[MY_UUID] ? allUserStreams[MY_UUID] : {};
+          allUserStreams[MY_UUID]["videostream"] = stream;
         }
 
         if (videoTracks.length > 0) {
@@ -359,9 +368,9 @@ $(document).ready(function () {
     } else {
       $("#addRemoveCameraBtn").css({ color: "black" });
       for (var i in pcs) { //remove stream from all peers
-        pcs[i].removeStream(allUserStreams[socket.id]["videostream"]);
+        pcs[i].removeStream(allUserStreams[MY_UUID]["videostream"]);
       }
-      delete allUserStreams[socket.id]["videostream"];
+      delete allUserStreams[MY_UUID]["videostream"];
       socket.emit('removeCamera', true)
       updateUserLayout();
       camActive = false;
@@ -379,52 +388,52 @@ $(document).ready(function () {
 })
 
 //This is where the WEBRTC Magic happens!!!
-function createRemoteSocket(initiator, socketId) {
-  pcs[socketId] = new initEzWebRTC(initiator, webRTCConfig); //initiator
-  pcs[socketId].on("signaling", function (data) {
-    socket.emit("signaling", { destSocketId: socketId, signalingData: data })
+function createRemoteSocket(initiator, UUID) {
+  pcs[UUID] = new initEzWebRTC(initiator, webRTCConfig); //initiator
+  pcs[UUID].on("signaling", function (data) {
+    socket.emit("signaling", { destUUID: UUID, signalingData: data })
   })
-  pcs[socketId].on("stream", function (stream) {
-    gotRemoteStream(stream, socketId)
+  pcs[UUID].on("stream", function (stream) {
+    gotRemoteStream(stream, UUID)
   });
-  pcs[socketId].on("streamremoved", function (stream, kind) {
+  pcs[UUID].on("streamremoved", function (stream, kind) {
     console.log("STREAMREMOVED!")
     if (kind == "video") {
-      delete allUserStreams[socketId]["videostream"];
+      delete allUserStreams[UUID]["videostream"];
       updateUserLayout();
     }
   });
-  pcs[socketId].on("closed", function (stream) {
-    delete allUserStreams[socketId];
-    $('audio' + socketId).remove();
+  pcs[UUID].on("closed", function (stream) {
+    delete allUserStreams[UUID];
+    $('audio' + UUID).remove();
     updateUserLayout();
     console.log("disconnected!");
   });
-  pcs[socketId].on("connect", function () {
-    if (allUserStreams[socket.id]["videostream"]) {
+  pcs[UUID].on("connect", function () {
+    if (allUserStreams[MY_UUID]["videostream"]) {
       setTimeout(function () {
-        pcs[socketId].addStream(allUserStreams[socket.id]["videostream"])
+        pcs[UUID].addStream(allUserStreams[MY_UUID]["videostream"])
       }, 500)
     }
   });
-  pcs[socketId].on("iceFailed", function () {
-    console.log("Error: Ice failed to to socketId: ", socketId);
+  pcs[UUID].on("iceFailed", function () {
+    console.log("Error: Ice failed to to UUID: ", UUID);
   });
 }
 
-function gotRemoteStream(stream, socketId) {
+function gotRemoteStream(stream, UUID) {
   var videoTracks = stream.getVideoTracks();
   var audioTracks = stream.getAudioTracks();
 
   console.log("videoTracks", videoTracks)
   console.log("audioTracks", audioTracks)
 
-  $("#" + socketId).remove();
-  allUserStreams[socketId] = allUserStreams[socketId] ? allUserStreams[socketId] : {};
+  $("#" + UUID).remove();
+  allUserStreams[UUID] = allUserStreams[UUID] ? allUserStreams[UUID] : {};
   if (videoTracks.length >= 1) { //Videosteam
-    allUserStreams[socketId]["videostream"] = stream;
+    allUserStreams[UUID]["videostream"] = stream;
   } else {
-    allUserStreams[socketId]["audiostream"] = stream;
+    allUserStreams[UUID]["audiostream"] = stream;
   }
 
   updateUserLayout();
@@ -449,7 +458,7 @@ function updateUserLayout() {
 
     console.log(userStream)
 
-    if (userStream["audiostream"] && i !== socket.id) {
+    if (userStream["audiostream"] && i !== MY_UUID) {
       if ($("#audioStreams").find('#audio' + i).length == 0) {
         let audioDiv = $('<div id="audio' + i + '" style="display:none;"><audio autoplay></audio></div>');
         audioDiv.find("audio")[0].srcObject = userStream["audiostream"];
@@ -459,7 +468,7 @@ function updateUserLayout() {
 
     if (userStream["videostream"]) {
       var mirrorStyle = ""
-      if (i == socket.id && !screenActive) {
+      if (i == MY_UUID && !screenActive) {
         mirrorStyle = "transform: scaleX(-1);"
       }
       var userDisplayName = userStream["username"] && userStream["username"] != "NA" ? (userStream["username"].charAt(0).toUpperCase() + userStream["username"].slice(1)) : i.substr(0, 2).toUpperCase();
@@ -473,7 +482,7 @@ function updateUserLayout() {
       userDiv.find("video")[0].srcObject = userStream["videostream"];
       userDiv.find(".userPlaceholderContainer").hide();
 
-      if (i != socket.id) {
+      if (i != MY_UUID) {
         userDiv.find("video").css({ "cursor": "pointer" })
         userDiv.find("video").click(function () {
           openFullscreen(this);
@@ -488,7 +497,7 @@ function updateUserLayout() {
 
   if (streamCnt == 2) { //Display 2 users side by side
     for (var i in allUserDivs) {
-      if (i == socket.id) {
+      if (i == MY_UUID) {
         allUserDivs[i].css({ width: '20%', height: '30%', position: 'absolute', left: '20px', bottom: '30px', 'z-index': '1' });
       } else {
         allUserDivs[i].css({ width: '100%', height: '100%', float: 'left' });
@@ -503,7 +512,6 @@ function updateUserLayout() {
       $("#mediaDiv").append('<div id="line' + i + '"></div>')
     }
     let userPerLine = streamCnt <= 2 ? 1 : Math.ceil(streamCnt / lineCnt);
-    console.log(userPerLine)
     let cucnt = 1;
     for (var i in allUserDivs) {
       var cLineNr = Math.ceil(cucnt / userPerLine);

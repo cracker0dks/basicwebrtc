@@ -8,7 +8,7 @@
 const HTTPS_PORT = 3001;
 
 //Define API Version
-const API_VERSION = 1.0;
+const API_VERSION = 1.1;
 
 //Get dummy cert files for https
 var fs = require('fs');
@@ -37,16 +37,38 @@ console.log("--------------------------------------------");
 console.log("SIGNALINGSERVER RUNNING ON PORT: " + HTTPS_PORT);
 console.log("--------------------------------------------");
 
+var registerdUUIDs = {};
+var socketID_UUIDMatch = {};
+
 //Listen for IO connections and do signaling
 ioServer.sockets.on('connection', function (socket) {
     socket.emit('API_VERSION', API_VERSION);
 
     let roomOfUser = null;
     let nameOfUser = "NA";
+    let MY_UUID = null;
     console.log("NEW USER!");
 
+    socket.on("registerUUID", function (content, callback) {
+        const UUID = content["UUID"] || null;
+        const UUID_KEY = content["UUID"] || null;
+        if (UUID && UUID_KEY) {
+            if (!registerdUUIDs[UUID] || registerdUUIDs[UUID] == UUID_KEY) {
+                const alreadyRegistred = registerdUUIDs[UUID] == UUID_KEY;
+                registerdUUIDs[UUID] = UUID_KEY;
+                socketID_UUIDMatch[UUID] = socket.id;
+                MY_UUID = UUID;
+                callback(null, alreadyRegistred);
+            } else {
+                callback("UUID_KEY was not correct!")
+            }
+        } else {
+            callback("UUID or UUID_KEY was empty on registerUUID!")
+        }
+    });
+
     socket.on("closeConnection", function () {
-        socket.to(roomOfUser).emit('userDiscconected', socket.id);
+        socket.to(roomOfUser).emit('userDiscconected', MY_UUID);
     });
 
     socket.on("joinRoom", function (content, callback) {
@@ -55,17 +77,17 @@ ioServer.sockets.on('connection', function (socket) {
         if (!roomOfUser) {
             roomOfUser = roomname;
             nameOfUser = username;
-            socket.to(roomname).emit('userJoined', { socketId : socket.id });
-            console.log("joinRoom", roomname, socket.id);
+            socket.to(roomname).emit('userJoined', { UUID: MY_UUID });
+            console.log("joinRoom", roomname, MY_UUID);
             socket.join(roomname);
         }
     })
 
     socket.on("signaling", function (content) {
-        var destSocketId = content.destSocketId;
+        var destSocketId = socketID_UUIDMatch[content.destUUID];
         var signalingData = content.signalingData;
 
-        ioServer.to(destSocketId).emit('signaling', { signalingData: signalingData, fromSocketId: socket.id, username : nameOfUser });
+        ioServer.to(destSocketId).emit('signaling', { signalingData: signalingData, fromUUID: MY_UUID, username: nameOfUser });
     });
 
     //Return the current iceServers
