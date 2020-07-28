@@ -19,7 +19,11 @@ if (base64Domain && socketDomain) {
   socketDomain = atob(socketDomain);
 }
 
-
+var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+if(isMobile) {
+  $("#screenBtnContainer").hide();
+  $("#mediaControll").css({width: "270px"})
+}
 
 var socket;
 if (socketDomain) {
