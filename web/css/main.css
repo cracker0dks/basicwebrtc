@@ -78,3 +78,44 @@ ul>li {
 .fa-microphone-alt {
   color: #044e04;
 }
+
+div.screenshare-select-dialog-backdrop {
+  position: absolute;
+  z-index:100;
+  background: rgba(0,0,0,0.6);
+  width: 100%;
+  height: 100%;
+}
+
+div.screenshare-select-dialog {
+  background-color: darkslategray;
+  border-radius: 7px;
+  padding: 5pt;
+  margin: auto;
+  width: 50%;
+}
+
+div.screenshare-options {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+div.screenshare-option {
+  margin: 4px;
+  padding:2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid transparent;
+  max-width: 100px;
+}
+
+div.screenshare-option:hover {
+  border: 1px solid grey;
+}
+
+div.screenshare-option > img.thumbnail {
+  width: 100%;
+  max-width: 90px;
+  max-height: 90px;
+}
