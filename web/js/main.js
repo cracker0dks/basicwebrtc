@@ -382,7 +382,7 @@ $(document).ready(function () {
     if (window.x_extended && typeof window.x_extended.close === "function") { //Close window if we run in electron app
       window.x_extended.close()
     } else {
-      location = "/endcall.html";
+      location = "./endcall.html";
     }
   })
 })
