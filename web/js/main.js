@@ -9,7 +9,7 @@ var base64Domain = getUrlParam("base64domain", false);
 
 //ALL GET PARAMETERS
 var socketDomain = getUrlParam("socketdomain", false); //Domainname with path
-var camOnAtStart = getUrlParam("camon", false) ? true : false; //Defines if cam should be on at start
+var camOnAtStart = getUrlParam("camon", false) == false ? false : true; //Defines if cam should be on at start (On is default)
 var username = getUrlParam("username", "NA");
 var roomname = getUrlParam("roomname", false);
 

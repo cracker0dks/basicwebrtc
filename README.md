@@ -18,7 +18,7 @@ Setup your own Videoconference Server for 1on1 and group calls!
 ### All User parameters ###
 * `username` -> Change your username shown
 * `roomname` -> Change the name of the room
-* `camon` -> Start session with cam on
+* `camon` -> Default is on. Set to false to start session audio only
 * `socketdomain` -> Change if you want to use a different socketServer (Can also include path: `https://domainname.tld/path/sub/`)
 * `base64domain` -> true if socketDomain is given in base64 format
 
