@@ -29,7 +29,7 @@ Example: change the roomname: https://IP:3001/#roomname=yourSecretRoom
 Change the env variables: listen_ip ("0.0.0.0" default) and listen_port (3001 default)
 
 ### Behind a nginx reverse Proxy
-
+```
 location /basicwebrtc/ {
 	resolver 127.0.0.1 valid=30s;
 	proxy_set_header HOST $host;
@@ -38,7 +38,7 @@ location /basicwebrtc/ {
 	proxy_set_header Connection upgrade;
 	proxy_pass http://127.0.0.1:8080/;
 }
-
+```
 ## STUN and TURN Configuration ##
 If your clients are behind firewalls you might need to setup a TURN Server so the connection can fallback to that (Connection is e2e encrypted in any case).
 
