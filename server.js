@@ -6,6 +6,7 @@
 
 //Define https & websocket Port
 const HTTP_PORT = parseInt(process.env.listen_port) > 0 ? parseInt(process.env.listen_port) : 3001;
+const HTTP_IP = process.env.listen_ip ? process.env.listen_ip : "0.0.0.0";
 
 //Define API Version
 const API_VERSION = 1.1;
@@ -23,13 +24,13 @@ var crypto = require('crypto');
 var app = express();
 app.use(express.static(__dirname + '/web'));
 
-var server = http.createServer(app).listen(HTTP_PORT);
+var server = http.createServer(app).listen(HTTP_PORT, HTTP_IP);
 
 var icesevers = JSON.parse(fs.readFileSync("./iceservers.json", 'utf8'));
 
 var ioServer = io.listen(server);
 console.log("--------------------------------------------");
-console.log("SIGNALINGSERVER RUNNING ON PORT: " + HTTP_PORT);
+console.log("SIGNALINGSERVER RUNNING ON IP:PORT: " + HTTP_IP + ':' + HTTP_PORT);
 console.log("--------------------------------------------");
 
 var registerdUUIDs = {};
