@@ -13,7 +13,7 @@ Setup your own Videoconference Server for 1on1 and group calls!
 1. Install node and clone this repo
 2. run: npm i
 3. run: node server.js
-4. surf to: https://IP:3001
+4. surf to: http://IP:3001
 
 ### All User parameters ###
 * `username` -> Change your username shown
@@ -22,7 +22,18 @@ Setup your own Videoconference Server for 1on1 and group calls!
 * `socketdomain` -> Change if you want to use a different socketServer (Can also include path: `https://domainname.tld/path/sub/`)
 * `base64domain` -> true if socketDomain is given in base64 format
 
-Example: change the roomname and enable webcam per default: https://IP:3001/#roomname=yourSecretRoom&camon=true
+Example: change the roomname: https://IP:3001/#roomname=yourSecretRoom
+
+### Behind a nginx reverse Proxy
+
+location /basicwebrtc/ {
+	resolver 127.0.0.1 valid=30s;
+	proxy_set_header HOST $host;
+	proxy_http_version 1.1;
+	proxy_set_header Upgrade $http_upgrade;
+	proxy_set_header Connection upgrade;
+	proxy_pass http://127.0.0.1:8080/;
+}
 
 ## STUN and TURN Configuration ##
 If your clients are behind firewalls you might need to setup a TURN Server so the connection can fallback to that (Connection is e2e encrypted in any case).

@@ -5,18 +5,16 @@
 //------------------------------
 
 //Define https & websocket Port
-const HTTPS_PORT = 3001;
+const HTTP_PORT = 3001;
 
 //Define API Version
 const API_VERSION = 1.1;
 
 //Get dummy cert files for https
 var fs = require('fs');
-var privateKey = fs.readFileSync('./cert/key.pem');
-var certificate = fs.readFileSync('./cert/cert.pem');
 
 //Require modules
-var https = require('https');
+var http = require('http');
 var express = require('express');
 var io = require('socket.io');
 var crypto = require('crypto');
@@ -25,16 +23,13 @@ var crypto = require('crypto');
 var app = express();
 app.use(express.static(__dirname + '/web'));
 
-var server = https.createServer({
-    key: privateKey,
-    cert: certificate
-}, app).listen(HTTPS_PORT);
+var server = http.createServer(app).listen(HTTP_PORT);
 
 var icesevers = JSON.parse(fs.readFileSync("./iceservers.json", 'utf8'));
 
 var ioServer = io.listen(server);
 console.log("--------------------------------------------");
-console.log("SIGNALINGSERVER RUNNING ON PORT: " + HTTPS_PORT);
+console.log("SIGNALINGSERVER RUNNING ON PORT: " + HTTP_PORT);
 console.log("--------------------------------------------");
 
 var registerdUUIDs = {};
