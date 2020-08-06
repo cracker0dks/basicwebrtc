@@ -24,6 +24,10 @@ Setup your own Videoconference Server for 1on1 and group calls!
 
 Example: change the roomname: https://IP:3001/#roomname=yourSecretRoom
 
+### Config Server Port
+
+Change the env variable: listen_port
+
 ### Behind a nginx reverse Proxy
 
 location /basicwebrtc/ {

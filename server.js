@@ -5,7 +5,7 @@
 //------------------------------
 
 //Define https & websocket Port
-const HTTP_PORT = 3001;
+const HTTP_PORT = parseInt(process.env.listen_port) > 0 ? parseInt(process.env.listen_port) : 3001;
 
 //Define API Version
 const API_VERSION = 1.1;
