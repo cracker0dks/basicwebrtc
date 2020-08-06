@@ -60,6 +60,11 @@ socket.on('connect_failed', function () {
 socket.on("connect", function () {
   socketConnected = true;
 
+  socket.on("currentIceServers", function (newIceServers) {
+    console.log("got newIceServers", newIceServers)
+    webRTCConfig["iceServers"] = newIceServers;
+  })
+
   socket.emit("registerUUID", { "UUID": MY_UUID, "UUID_KEY": MY_UUID_KEY }, function (err, alreadyRegistered) {
     if (err) {
       return console.log(err)
@@ -98,11 +103,6 @@ socket.on("connect", function () {
       delete allUserStreams[userUUID];
       $('audio' + userUUID).remove();
       updateUserLayout();
-    })
-
-    socket.on("currentIceServers", function (newIceServers) {
-      console.log("got newIceServers", newIceServers)
-      webRTCConfig["iceServers"] = newIceServers;
     })
 
     if (camOnAtStart) {
