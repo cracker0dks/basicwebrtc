@@ -49,7 +49,7 @@ If your server ip is 10.10.10.10 and your want to name it "myturnserver" run it 
 
 Run `docker run -d --net=host --restart=always rofl256/turnserver usernameAdmin passwordAdmin realm "10.10.10.10" "10.10.10.10" "10.10.10.10" authSecret`
 
-Don't forget to change the admin username password and authSecret. 
+Don't forget to change the admin username, password and authSecret. 
 
 For more configurations of this  take a look at repo of the container (https://github.com/cracker0dks/turn-server-docker-image) and the COTURN repo itself: https://github.com/coturn/coturn
 
