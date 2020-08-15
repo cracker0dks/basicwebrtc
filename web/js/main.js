@@ -7,7 +7,7 @@ var subdir = window.location.pathname.endsWith("/") ? window.location.pathname :
 
 var base64Domain = getUrlParam("base64domain", false);
 
-//ALL GET PARAMETERS
+//ALL # PARAMETERS
 var socketDomain = getUrlParam("socketdomain", false); //Domainname with path
 var camOnAtStart = getUrlParam("camon", false) == false ? false : true; //Defines if cam should be on at start (On is default)
 var username = getUrlParam("username", "NA");
@@ -23,7 +23,7 @@ if (base64Domain && socketDomain) {
 }
 
 var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-if (isMobile) {
+if (isMobile) { //No Screenshare on mobile devices
   $("#screenBtnContainer").hide();
   $("#mediaControll").css({ width: "270px" })
 }
@@ -170,56 +170,6 @@ document.addEventListener('keydown', ev => {
     }
   }
 })
-
-/**
- * @returns Promise<stream id to share>
- */
-async function electron_select_screen_to_share(sources) {
-  const screenshareDialog = document.querySelector('div.screenshare-select-dialog-backdrop')
-
-  let fail, success;
-  const resultPromise = new Promise((resolve, reject) => {
-    fail = reject
-    success = resolve
-  })
-
-  const options = screenshareDialog.querySelector("div.screenshare-options")
-  // remove old options
-  while (options.firstChild) {
-    options.removeChild(options.firstChild);
-  }
-  const closeCallback = (screenid) => {
-    screenshareDialog.hidden = true
-    success(screenid)
-  }
-  // add new options
-  for (let source of sources) {
-    console.log(source)
-    const option = document.createElement('div')
-    option.classList.add('screenshare-option')
-    const thumbnail = document.createElement('img')
-    thumbnail.classList.add('thumbnail')
-    //thumbnail.style = 'background-image: url(' + source.thumbnail.toDataURL() + ');'
-    thumbnail.src = source.thumbnail.toDataURL()
-    thumbnail.title = source.id
-    option.appendChild(thumbnail)
-    const name = document.createElement('p')
-    name.innerText = source.name
-    name.title = source.name
-    option.appendChild(name)
-    option.onclick = closeCallback.bind(null, source.id)
-    options.appendChild(option)
-  }
-
-  const cancelButton = screenshareDialog.querySelector('#cancel-screenshare-select')
-  cancelButton.onclick = _ => {
-    screenshareDialog.hidden = true
-    fail(new Error("User canceled"))
-  }
-
-  screenshareDialog.hidden = false
-  return resultPromise
-}
 
 $(document).ready(function () {
   $("#muteUnmuteMicBtn").click(function () {
@@ -448,15 +398,13 @@ function updateUserLayout() {
   for (var i in allUserStreams) {
     var userStream = allUserStreams[i];
     streamCnt++;
-    console.log(userStream["username"])
+
     var uDisplay = userStream["username"] && userStream["username"] != "NA" ? userStream["username"].substr(0, 2).toUpperCase() : i.substr(0, 2).toUpperCase();
     var userDiv = $('<div class="videoplaceholder" style="position:relative;" id="' + i + '">' +
       '<div class="userPlaceholderContainer" style="width:100%; height:100%; position:absolute; overflow:hidden; background: #474747;">' +
       '<div class="userPlaceholder">' + uDisplay + '</div>' +
       '</div>' +
       '</div>')
-
-    console.log(userStream)
 
     if (userStream["audiostream"] && i !== MY_UUID) {
       if ($("#audioStreams").find('#audio' + i).length == 0) {
@@ -555,6 +503,7 @@ window.onresize = function (event) {
   }, 2000)
 };
 
+//Secreenshare On Browser
 function openFullscreen(elem) {
   if (elem.requestFullscreen) {
     elem.requestFullscreen();
@@ -565,4 +514,55 @@ function openFullscreen(elem) {
   } else if (elem.msRequestFullscreen) { /* IE/Edge */
     elem.msRequestFullscreen();
   }
+}
+
+//Screenshare in Electron
+/**
+ * @returns Promise<stream id to share>
+ */
+async function electron_select_screen_to_share(sources) {
+  const screenshareDialog = document.querySelector('div.screenshare-select-dialog-backdrop')
+
+  let fail, success;
+  const resultPromise = new Promise((resolve, reject) => {
+    fail = reject
+    success = resolve
+  })
+
+  const options = screenshareDialog.querySelector("div.screenshare-options")
+  // remove old options
+  while (options.firstChild) {
+    options.removeChild(options.firstChild);
+  }
+  const closeCallback = (screenid) => {
+    screenshareDialog.hidden = true
+    success(screenid)
+  }
+  // add new options
+  for (let source of sources) {
+    console.log(source)
+    const option = document.createElement('div')
+    option.classList.add('screenshare-option')
+    const thumbnail = document.createElement('img')
+    thumbnail.classList.add('thumbnail')
+    //thumbnail.style = 'background-image: url(' + source.thumbnail.toDataURL() + ');'
+    thumbnail.src = source.thumbnail.toDataURL()
+    thumbnail.title = source.id
+    option.appendChild(thumbnail)
+    const name = document.createElement('p')
+    name.innerText = source.name
+    name.title = source.name
+    option.appendChild(name)
+    option.onclick = closeCallback.bind(null, source.id)
+    options.appendChild(option)
+  }
+
+  const cancelButton = screenshareDialog.querySelector('#cancel-screenshare-select')
+  cancelButton.onclick = _ => {
+    screenshareDialog.hidden = true
+    fail(new Error("User canceled"))
+  }
+
+  screenshareDialog.hidden = false
+  return resultPromise
 }
