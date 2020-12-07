@@ -15,8 +15,8 @@
     "webrtc"
   ],
   "dependencies": {
-    "express": "*",
-    "socket.io": "*"
+    "express": "^4.17.1",
+    "socket.io": "^3.0.4"
   },
   "author": "Cracker0dks",
   "license": "MIT"
