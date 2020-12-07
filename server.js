@@ -14,21 +14,20 @@ const API_VERSION = 1.1;
 //Get dummy cert files for https
 var fs = require('fs');
 
-//Require modules
-var http = require('http');
+//SpinUP Webserver with socketIO
 var express = require('express');
-var io = require('socket.io');
+var handler = express();
+handler.use(express.static(__dirname + '/web'));
+
+var app = require('http').createServer(handler)
+
+var ioServer = require('socket.io')(app);
 var crypto = require('crypto');
 
-//SpinUP Webserver with socketIO
-var app = express();
-app.use(express.static(__dirname + '/web'));
-
-var server = http.createServer(app).listen(HTTP_PORT, HTTP_IP);
+app.listen(HTTP_PORT, HTTP_IP);
 
 var icesevers = JSON.parse(fs.readFileSync("./iceservers.json", 'utf8'));
 
-var ioServer = io.listen(server);
 console.log("--------------------------------------------");
 console.log("SIGNALINGSERVER RUNNING ON IP:PORT: " + HTTP_IP + ':' + HTTP_PORT);
 console.log("--------------------------------------------");
