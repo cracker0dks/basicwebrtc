@@ -1,6 +1,6 @@
 # basicWebRTC
 
-Setup your own Videoconference Server for 1on1 and group calls!
+Setup your own Videoconference Server for 1on1 and group calls! All Calls are encrypted Peer 2 Peer!
 
 ## Functions
 * Audio
