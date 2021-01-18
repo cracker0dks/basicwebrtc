@@ -17,7 +17,14 @@ var fs = require('fs');
 //SpinUP Webserver with socketIO
 var express = require('express');
 var handler = express();
-handler.use(express.static(__dirname + '/web'));
+
+handler.use(express.static(__dirname + '/web', {
+    setHeaders: function (res, path) {
+        res.append('Access-Control-Allow-Origin', ['*']);
+        res.append('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE');
+        res.append('Access-Control-Allow-Headers', 'Content-Type');
+    }
+}));
 
 var app = require('http').createServer(handler)
 
