@@ -28,6 +28,8 @@ if (isMobile) { //No Screenshare on mobile devices
   $("#mediaControll").css({ width: "270px" })
 }
 
+const SocketIO_Options = {withCredentials: false}
+
 var socket;
 if (socketDomain) {
   socketDomain = socketDomain.replace('https://', '').replace('http://', '').split("#")[0];
@@ -38,9 +40,9 @@ if (socketDomain) {
   subdir = subdir.endsWith('/') ? subdir : subdir + '/';
   console.log('socketDomain', socketDomain);
   console.log('subdir', subdir);
-  socket = io(socketDomain, { "path": subdir + "socket.io" })
+  socket = io(socketDomain, { "path": subdir + "socket.io", ...SocketIO_Options })
 } else {
-  socket = subdir == "/" ? io() : io("", { "path": subdir + "/socket.io" }); //Connect to socketIo even on subpaths
+  socket = subdir == "/" ? io("", SocketIO_Options) : io("", { "path": subdir + "/socket.io", ...SocketIO_Options }); //Connect to socketIi even on subpaths
 }
 
 var webRTCConfig = {};

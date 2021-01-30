@@ -28,7 +28,13 @@ handler.use(express.static(__dirname + '/web', {
 
 var app = require('http').createServer(handler)
 
-var ioServer = require('socket.io')(app);
+var ioServer = require('socket.io')(app, {cors: {
+    origin: function (origin, callback) {
+        callback(null, true) // allow all origins
+    },
+    credentials:false,
+    methods: ["GET", "POST"]
+  }});
 var crypto = require('crypto');
 
 app.listen(HTTP_PORT, HTTP_IP);
