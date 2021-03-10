@@ -62,6 +62,9 @@ socket.on("msg", function (msg) {
   });
   $("#chatText").append(`<div>${msg}</div>`)
   $("#chatText").animate({ scrollTop: $("#chatText")[0].scrollHeight }, 1);
+  if(!$("#chatText").is(":visible")) {
+    $("#addRemoveChatBtn").css({ "color": "#730303" });
+  }
 })
 
 socket.on('connect_failed', function () {
