@@ -57,7 +57,7 @@ var chatActive = false;
 
 socket.on("msg", function (msg) {
   var msg = msg.replace(/(<a href=")?((https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)))(">(.*)<\/a>)?/gi, function () { //Replace link in text with real link
-  msg.find("a").attr("target", "_blank")
+  $(msg).find("a").attr("target", "_blank")
     return '<a href="' + arguments[2] + '">' + (arguments[7] || arguments[2]) + '</a>'
   });
   $("#chatText").append(`<div>${msg}</div>`)
