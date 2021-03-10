@@ -119,3 +119,67 @@ div.screenshare-option > img.thumbnail {
   max-width: 90px;
   max-height: 90px;
 }
+
+#chatDiv {
+  width: 250px;
+  height: 330px;
+  position: absolute;
+  right: 20px;
+  bottom: 130px;
+  border-radius: 7px;
+  background: #7b79798c;
+  border: 1px solid #80808087;
+  color: #c7c6c6;
+  display: none;
+}
+
+#chatInputText {
+  width: 100%;
+  position: absolute;
+  bottom: 0;
+  background: #0000ff00;
+  border: 0px;
+  border-top: 1px solid #8080804f;
+  outline: none;
+  color: #bbb;
+  padding: 5px;
+  padding-right: 30px;
+}
+
+#chatSendBtn {
+  font-size: 1em;
+  position: absolute;
+  bottom: 5px;
+  right: 7px;
+  color: #c1bebe;
+  width: 20px;
+  height: 17px;
+  cursor: pointer;
+}
+
+#chatText {
+  height: 303px;
+  overflow-y: auto;
+  padding-left: 3px;
+}
+
+/* SCROLLBAR */
+/* width */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+/* Track */
+::-webkit-scrollbar-track {
+  background: #f1f1f1; 
+}
+ 
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: #888; 
+}
+
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: #555; 
+}

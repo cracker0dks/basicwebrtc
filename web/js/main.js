@@ -28,7 +28,7 @@ if (isMobile) { //No Screenshare on mobile devices
   $("#mediaControll").css({ width: "270px" })
 }
 
-const SocketIO_Options = {withCredentials: false}
+const SocketIO_Options = { withCredentials: false }
 
 var socket;
 if (socketDomain) {
@@ -53,6 +53,15 @@ var socketConnected = false;
 var micMuted = false;
 var camActive = false;
 var screenActive = false;
+var chatActive = false;
+
+socket.on("msg", function (msg) {
+  var msg = msg.replace(/(<a href=")?((https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)))(">(.*)<\/a>)?/gi, function () { //Replace link in text with real link
+    return '<a href="' + arguments[2] + '">' + (arguments[7] || arguments[2]) + '</a>'
+  });
+  $("#chatText").append(`<div>${msg}</div>`)
+  $("#chatText").animate({ scrollTop: $("#chatText").height() }, "slow");
+})
 
 socket.on('connect_failed', function () {
   alert("Connection to socketserver failed! Please check the logs!")
@@ -72,10 +81,10 @@ socket.on("connect", function () {
       return console.log(err)
     }
 
-    if(alreadyRegistered) {
+    if (alreadyRegistered) {
       return console.log("We are alreadyregistered so don't do it again!")
     }
-    
+
     socket.on("API_VERSION", function (serverAPI_VERSION) {
       if (API_VERSION != serverAPI_VERSION) {
         alert("SERVER has a different API Version (Client: v" + API_VERSION + " Server: v" + serverAPI_VERSION + ")! This can cause problems, so be warned!")
@@ -189,6 +198,37 @@ $(document).ready(function () {
     micMuted = !micMuted;
   })
 
+  $("#addRemoveChatBtn").click(function () {
+    
+    if (chatActive) {
+      $("#chatDiv").hide();
+      $("#addRemoveChatBtn").css({ color: "black" });
+      chatActive = false;
+    } else {
+      $("#addRemoveChatBtn").css({ color: "#030356" });
+      $("#chatDiv").show();
+      chatActive = true;
+      $("#chatInputText").focus();
+    }
+
+  })
+
+  $("#chatSendBtn").click(function () {
+    sendMsg()
+  })
+
+  $(document).on('keypress', function (e) {
+    if (e.which == 13 && $("#chatSendBtn").is(":visible")) {
+      sendMsg();
+    }
+  });
+
+  function sendMsg() {
+    console.log("send")
+    let msg = $("#chatInputText").val().trim();
+    socket.emit('sendMsg', msg);
+    $("#chatInputText").val("")
+  }
 
   $("#addRemoveScreenBtn").click(async function () {
     if (camActive) {

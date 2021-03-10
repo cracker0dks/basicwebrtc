@@ -28,13 +28,15 @@ handler.use(express.static(__dirname + '/web', {
 
 var app = require('http').createServer(handler)
 
-var ioServer = require('socket.io')(app, {cors: {
-    origin: function (origin, callback) {
-        callback(null, true) // allow all origins
-    },
-    credentials:false,
-    methods: ["GET", "POST"]
-  }});
+var ioServer = require('socket.io')(app, {
+    cors: {
+        origin: function (origin, callback) {
+            callback(null, true) // allow all origins
+        },
+        credentials: false,
+        methods: ["GET", "POST"]
+    }
+});
 var crypto = require('crypto');
 
 app.listen(HTTP_PORT, HTTP_IP);
@@ -79,9 +81,12 @@ ioServer.sockets.on('connection', function (socket) {
         socket.to(roomOfUser).emit('userDiscconected', MY_UUID);
     });
 
+    var roomname;
+    var username = "";
     socket.on("joinRoom", function (content, callback) {
-        var roomname = content["roomname"] || "";
-        var username = content["username"] || "";
+        roomname = content["roomname"] || "";
+        username = content["username"] || "";
+        console.log(username)
         if (!roomOfUser) {
             roomOfUser = roomname;
             nameOfUser = username;
@@ -90,6 +95,20 @@ ioServer.sockets.on('connection', function (socket) {
             socket.join(roomname);
         }
     })
+
+    socket.on("sendMsg", function (msg) {
+        if (typeof (msg) == "string" && msg != "") {
+            msg = msg.replace(/\\/g, "\\\\")
+                .replace(/\$/g, "\\$")
+                .replace(/'/g, "\\'")
+                .replace(/"/g, "\\\"");
+            if(username != "") {
+                msg = username + ': ' + msg;
+            }
+            socket.to(roomname).emit('msg', msg);
+            socket.emit('msg', msg);
+        }
+    });
 
     socket.on("signaling", function (content) {
         var destSocketId = socketID_UUIDMatch[content.destUUID];
