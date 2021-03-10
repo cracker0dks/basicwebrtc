@@ -97,16 +97,18 @@ ioServer.sockets.on('connection', function (socket) {
     })
 
     socket.on("sendMsg", function (msg) {
-        if (typeof (msg) == "string" && msg != "") {
+        if (typeof (msg) == "string") {
             msg = msg.replace(/\\/g, "\\\\")
                 .replace(/\$/g, "\\$")
                 .replace(/'/g, "\\'")
                 .replace(/"/g, "\\\"");
-            if(username != "") {
-                msg = username + ': ' + msg;
+            if (msg != "") {
+                if (username != "" && username != "NA") {
+                    msg = username + ': ' + msg;
+                }
+                socket.to(roomname).emit('msg', msg);
+                socket.emit('msg', msg);
             }
-            socket.to(roomname).emit('msg', msg);
-            socket.emit('msg', msg);
         }
     });
 
