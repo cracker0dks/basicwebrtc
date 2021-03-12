@@ -62,7 +62,7 @@ socket.on("msg", function (msg) {
   $("#chatText").append(`<div>${msg}</div>`)
   $("#chatText").find("a").attr("target", "_blank")
   $("#chatText").animate({ scrollTop: $("#chatText")[0].scrollHeight }, 1);
-  if(!$("#chatText").is(":visible")) {
+  if (!$("#chatText").is(":visible")) {
     $("#addRemoveChatBtn").css({ "color": "#730303" });
   }
 })
@@ -318,6 +318,8 @@ $(document).ready(function () {
       for (var i in pcs) { //remove stream from all peers
         pcs[i].removeStream(allUserStreams[MY_UUID]["videostream"]);
       }
+      const tracks = allUserStreams[MY_UUID]["videostream"].getVideoTracks()
+      tracks.forEach(track => track.stop())
       delete allUserStreams[MY_UUID]["videostream"];
       socket.emit('removeCamera', true)
       updateUserLayout();
@@ -333,7 +335,7 @@ $(document).ready(function () {
 
     if (!camActive) {
       $("#addRemoveCameraBtn").css({ color: "#030356" });
-       navigator.getUserMedia({
+      navigator.getUserMedia({
         video: { 'facingMode': "user" },
         audio: false
       }, function (stream) { //OnSuccess
