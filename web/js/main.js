@@ -203,7 +203,7 @@ $(document).ready(function () {
   })
 
   $("#addRemoveChatBtn").click(function () {
-    
+
     if (chatActive) {
       $("#chatDiv").hide();
       $("#addRemoveChatBtn").css({ color: "black" });
@@ -330,9 +330,10 @@ $(document).ready(function () {
       $("#addRemoveScreenBtn").click();
     }
 
+
     if (!camActive) {
       $("#addRemoveCameraBtn").css({ color: "#030356" });
-      navigator.getUserMedia({
+       navigator.getUserMedia({
         video: { 'facingMode': "user" },
         audio: false
       }, function (stream) { //OnSuccess
@@ -365,6 +366,11 @@ $(document).ready(function () {
       $("#addRemoveCameraBtn").css({ color: "black" });
       for (var i in pcs) { //remove stream from all peers
         pcs[i].removeStream(allUserStreams[MY_UUID]["videostream"]);
+      }
+      if (allUserStreams[MY_UUID]["videostream"]) {
+
+        const tracks = allUserStreams[MY_UUID]["videostream"].getVideoTracks()
+        tracks.forEach(track => track.stop())
       }
       delete allUserStreams[MY_UUID]["videostream"];
       socket.emit('removeCamera', true)
