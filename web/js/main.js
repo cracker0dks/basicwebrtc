@@ -1,4 +1,4 @@
-const API_VERSION = 1.1;
+const API_VERSION = 1.2;
 
 const MY_UUID = uuidv4();
 const MY_UUID_KEY = uuidv4();
@@ -114,6 +114,15 @@ socket.on("connect", function () {
       createRemoteSocket(true, userUUID)
     })
 
+    socket.on("currentAudioLvl", function (content) {
+      var fromUUID = content["fromUUID"] || null;
+      let currentAudioLvl = content["currentAudioLvl"] || 0;
+      let perCent = currentAudioLvl * 50;
+      $("#" + fromUUID).find(".userPlaceholder").css({ "border": "2px solid rgb(255 255 255 / " + perCent + "%)" });
+    })
+
+
+
     socket.on("userDiscconected", function (userUUID) {
       delete allUserStreams[userUUID];
       $('audio' + userUUID).remove();
@@ -127,7 +136,6 @@ socket.on("connect", function () {
       }, function (stream) { //OnSuccess
         startUserMedia()
       }, function (error) { //OnError
-        startUserMedia()
         console.log('getUserMedia error! Got this error: ', error);
       });
     } else {
@@ -153,6 +161,12 @@ socket.on("connect", function () {
 
         if (audioTracks.length > 0) {
           console.log('Using audio device: ' + audioTracks[0].label);
+          calcCurrentVolumeLevel(stream, function (currentAudioLvl) {
+            socket.emit('currentAudioLvl', currentAudioLvl);
+            var fromUUID = MY_UUID || null;
+            let perCent = currentAudioLvl * 50;
+            $("#" + fromUUID).find(".userPlaceholder").css({ "border": "2px solid rgb(255 255 255 / " + perCent + "%)" });
+          });
         }
 
         joinRoom();
@@ -162,6 +176,7 @@ socket.on("connect", function () {
             $("#addRemoveCameraBtn").click();
           }, 1000)
         }
+
       }, function (error) { //OnError
         alert("Could not get your Mic! You need at least one Mic!")
         console.log('getUserMedia error! Got this error: ', error);

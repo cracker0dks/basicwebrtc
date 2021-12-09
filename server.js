@@ -9,7 +9,7 @@ const HTTP_PORT = parseInt(process.env.listen_port) > 0 ? parseInt(process.env.l
 const HTTP_IP = process.env.listen_ip ? process.env.listen_ip : "0.0.0.0";
 
 //Define API Version
-const API_VERSION = 1.1;
+const API_VERSION = 1.2;
 
 //Get dummy cert files for https
 var fs = require('fs');
@@ -110,6 +110,10 @@ ioServer.sockets.on('connection', function (socket) {
                 socket.emit('msg', msg);
             }
         }
+    });
+
+    socket.on("currentAudioLvl", function (currentAudioLvl) {
+        socket.to(roomname).emit('currentAudioLvl', { currentAudioLvl: currentAudioLvl, fromUUID: MY_UUID });
     });
 
     socket.on("signaling", function (content) {

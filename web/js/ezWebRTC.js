@@ -248,7 +248,7 @@ function preferH264Codec(sdp) {
         }
     }
 
-    for(var k in videoLinesIndexs) {
+    for (var k in videoLinesIndexs) {
         var videoLineIndex = videoLinesIndexs[k];
         for (var i = h264ids.length; i--; i >= 0) { //Change codec order
             var h264id = h264ids[i];
@@ -270,18 +270,62 @@ function removeDoubleSSRC(sdp) {
             mediaCnt++;
         }
         if (lineSplit[i].startsWith("a=ssrc")) { //find the video line
-            if(!mediaWithSSRC) {
+            if (!mediaWithSSRC) {
                 mediaWithSSRC = mediaCnt;
             }
-            if(mediaWithSSRC < mediaCnt) {
+            if (mediaWithSSRC < mediaCnt) {
                 readyToRemove = true;
             }
         }
-        if(readyToRemove && lineSplit[i].startsWith("a=ssrc")) {
+        if (readyToRemove && lineSplit[i].startsWith("a=ssrc")) {
             //Do nothing
         } else {
             res.push(lineSplit[i]);
         }
     }
     return res.join("\n");
+}
+
+function calcCurrentVolumeLevel(stream, callback) { //Returns audio levels for audio stream from 0 - silent; to 2 loud
+    //Calc the current volume!
+    var audioAontext = window.AudioContext || window.webkitAudioContext;
+    var context = new audioAontext();
+    var microphone = context.createMediaStreamSource(stream);
+    var dest = context.createMediaStreamDestination();
+
+    gainNode = context.createGain();
+
+    var analyser = context.createAnalyser();
+    analyser.fftSize = 2048;
+    var bufferLength = analyser.frequencyBinCount;
+    var dataArray = new Uint8Array(bufferLength);
+    analyser.getByteTimeDomainData(dataArray);
+
+    var audioVolume = 0;
+    var oldAudioVolume = 0;
+    function calcVolume() {
+        requestAnimationFrame(calcVolume);
+        analyser.getByteTimeDomainData(dataArray);
+        var mean = 0;
+        for (var i = 0; i < dataArray.length; i++) {
+            mean += Math.abs(dataArray[i] - 127);
+        }
+        mean /= dataArray.length;
+        mean = Math.round(mean);
+        if (mean < 1.2)
+            audioVolume = 0;
+        else if (mean < 2.5)
+            audioVolume = 1;
+        else
+            audioVolume = 2;
+
+        if (audioVolume != oldAudioVolume) {
+            callback(audioVolume);
+            oldAudioVolume = audioVolume;
+        }
+    }
+    calcVolume();
+    microphone.connect(gainNode);
+    gainNode.connect(analyser); //get sound  
+    analyser.connect(dest);
 }
