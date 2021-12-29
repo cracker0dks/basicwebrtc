@@ -401,7 +401,30 @@ $(document).ready(function () {
     if (window.x_extended && typeof window.x_extended.close === "function") { //Close window if we run in electron app
       window.x_extended.close()
     } else {
-      location = "./endcall.html";
+      $('body').append('<div id="topDiv"></div>');
+      $('body').append('<div id="centerDiv"></div>');
+      $('body').append('<div id="bottomDiv"></div>');
+
+      $('div#topDiv').animate({
+        //51% for chrome
+        height: "50%"
+        , opacity: 1
+      }, 500);
+      $('div#bottomDiv').animate({
+        //51% for chrome
+        height: "50%"
+        , opacity: 1
+      }, 500, function () {
+        $('div#centerDiv').css({ display: "block" }).animate({
+          width: "0%",
+          left: "50%"
+        }, 400, function () {
+          setTimeout(function () {
+            location = "./endcall.html";
+          }, 500)
+        });
+      }
+      );
     }
   })
 })
