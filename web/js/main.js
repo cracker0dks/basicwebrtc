@@ -33,19 +33,23 @@ var socket = {
   },
   emit: function (key, msg) {
     console.log("SEND", key, msg);
-    window.webxdc.sendUpdate({ key: key, "fromUUID": window.webxdc.selfName(), "msg": msg });
+    msg["destUUID"] = msg["destUUID"] ? msg["destUUID"] : "all";
+    window.webxdc.sendUpdate({ key: key, destUUID: msg["destUUID"], fromUUID: window.webxdc.selfName(), "msg": msg });
   }
 };
 
 function receiveUpdate(update) {
   console.log("update", update, socket.onKeys)
   if (socket.onKeys[update.payload.key]) {
-    console.log("RES", update.payload, update.payload["fromUUID"], MY_UUID);
-    if(update.payload["fromUUID"] != MY_UUID || update.payload.key == "msg") {
-      console.log("RES_FOR_ME", update.payload);
+    update.payload.msg["fromUUID"] = update.payload["fromUUID"];
+    if(update.payload.key == "msg") {
       socket.onKeys[update.payload.key](update.payload.msg);
+    } else if (update.payload["fromUUID"] != MY_UUID && (update.payload["destUUID"] == MY_UUID || !update.payload["destUUID"] || update.payload["destUUID"] == "all")) {
+      //console.log("RES_FOR_ME", update.payload);
+      socket.onKeys[update.payload.key](update.payload.msg);
+    } else if(update.payload["fromUUID"] != MY_UUID) {
+      console.log("RES_NOT_FOR_ME", update.payload, update.payload["fromUUID"], MY_UUID);
     }
-    
   }
 }
 
@@ -143,7 +147,7 @@ function startUserMedia() {
 
     joinRoom();
     function joinRoom() {
-      socket.emit("userJoined", {UUID : MY_UUID})
+      socket.emit("userJoined", { UUID: MY_UUID })
     }
 
     updateUserLayout();
