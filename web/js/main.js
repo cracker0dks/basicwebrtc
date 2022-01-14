@@ -1,22 +1,10 @@
-const API_VERSION = 1.2;
-
-const MY_UUID = uuidv4();
-const MY_UUID_KEY = uuidv4();
-
-var subdir = window.location.pathname.endsWith("/") ? window.location.pathname : window.location.pathname + "/";
-
 var base64Domain = getUrlParam("base64domain", false);
+
+window.localStorage.clear();
 
 //ALL # PARAMETERS
 var socketDomain = getUrlParam("socketdomain", false); //Domainname with path
 var camOnAtStart = getUrlParam("camon", false) == false ? false : true; //Defines if cam should be on at start (On is default)
-var username = getUrlParam("username", "NA");
-var roomname = getUrlParam("roomname", false);
-
-if (!roomname) {
-  roomname = "r" + Math.random().toString().replace(".", "")
-  window.location = location.href + "#roomname=" + roomname
-}
 
 if (base64Domain && socketDomain) {
   socketDomain = atob(socketDomain);
@@ -28,32 +16,41 @@ if (isMobile) { //No Screenshare on mobile devices
   $("#mediaControll").css({ width: "270px" })
 }
 
-const SocketIO_Options = { withCredentials: false }
-
-var socket;
-if (socketDomain) {
-  socketDomain = socketDomain.replace('https://', '').replace('http://', '').split("#")[0];
-  var domainSplit = socketDomain.split('/');
-  socketDomain = 'https://' + domainSplit[0];
-  domainSplit.shift();
-  subdir = '/' + domainSplit.join('/');
-  subdir = subdir.endsWith('/') ? subdir : subdir + '/';
-  console.log('socketDomain', socketDomain);
-  console.log('subdir', subdir);
-  socket = io(socketDomain, { "path": subdir + "socket.io", ...SocketIO_Options })
-} else {
-  socket = subdir == "/" ? io("", SocketIO_Options) : io("", { "path": subdir + "/socket.io", ...SocketIO_Options }); //Connect to socketIi even on subpaths
-}
-
 var webRTCConfig = {};
 
 var allUserStreams = {};
 var pcs = {}; //Peer connections to all remotes
-var socketConnected = false;
 var micMuted = false;
 var camActive = false;
 var screenActive = false;
 var chatActive = false;
+var MY_UUID = window.webxdc.selfName();
+
+var socket = {
+  onKeys: {},
+  on: function (key, callback) {
+    this.onKeys[key] = callback;
+  },
+  emit: function (key, msg) {
+    console.log("SEND", key, msg);
+    window.webxdc.sendUpdate({ key: key, "fromUUID": window.webxdc.selfName(), "msg": msg });
+  }
+};
+
+function receiveUpdate(update) {
+  console.log("update", update, socket.onKeys)
+  if (socket.onKeys[update.payload.key]) {
+    console.log("RES", update.payload, update.payload["fromUUID"], MY_UUID);
+    if(update.payload["fromUUID"] != MY_UUID || update.payload.key == "msg") {
+      console.log("RES_FOR_ME", update.payload);
+      socket.onKeys[update.payload.key](update.payload.msg);
+    }
+    
+  }
+}
+
+window.webxdc.setUpdateListener(receiveUpdate);
+window.webxdc.getAllUpdates().forEach(receiveUpdate);
 
 socket.on("msg", function (msg) {
   var msg = msg.replace(/(<a href=")?((https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)))(">(.*)<\/a>)?/gi, function () { //Replace link in text with real link
@@ -67,128 +64,103 @@ socket.on("msg", function (msg) {
   }
 })
 
-socket.on('connect_failed', function () {
-  alert("Connection to socketserver failed! Please check the logs!")
-  socketConnected = false;
-});
+socket.on("currentIceServers", function (newIceServers) {
+  console.log("got newIceServers", newIceServers)
+  webRTCConfig["iceServers"] = newIceServers;
+})
 
-socket.on("connect", function () {
-  socketConnected = true;
+socket.on("signaling", function (data) {
+  var signalingData = data.signalingData;
+  var fromUUID = data.fromUUID;
+  if (!pcs[fromUUID]) {
+    createRemoteSocket(false, fromUUID)
+  }
+  pcs[fromUUID].signaling(signalingData);
 
-  socket.on("currentIceServers", function (newIceServers) {
-    console.log("got newIceServers", newIceServers)
-    webRTCConfig["iceServers"] = newIceServers;
-  })
+  if (data.username) {
+    allUserStreams[fromUUID] = allUserStreams[fromUUID] ? allUserStreams[fromUUID] : {};
+    allUserStreams[fromUUID]["username"] = data.fromUUID;
+  }
+})
 
-  socket.emit("registerUUID", { "UUID": MY_UUID, "UUID_KEY": MY_UUID_KEY }, function (err, alreadyRegistered) {
-    if (err) {
-      return console.log(err)
-    }
+socket.on("userJoined", function (content) {
+  var userUUID = content["UUID"] || null;
+  createRemoteSocket(true, userUUID)
+})
 
-    if (alreadyRegistered) {
-      return console.log("We are alreadyregistered so don't do it again!")
-    }
+socket.on("currentAudioLvl", function (content) {
+  var fromUUID = content["fromUUID"] || null;
+  let currentAudioLvl = content["currentAudioLvl"] || 0;
+  let perCent = currentAudioLvl * 50;
+  $("#" + fromUUID).find(".userPlaceholder").css({ "border": "2px solid rgb(255 255 255 / " + perCent + "%)" });
+})
 
-    socket.on("API_VERSION", function (serverAPI_VERSION) {
-      if (API_VERSION != serverAPI_VERSION) {
-        alert("SERVER has a different API Version (Client: v" + API_VERSION + " Server: v" + serverAPI_VERSION + ")! This can cause problems, so be warned!")
+socket.on("userDiscconected", function (userUUID) {
+  delete allUserStreams[userUUID];
+  $('audio' + userUUID).remove();
+  updateUserLayout();
+})
+
+if (camOnAtStart) {
+  navigator.getUserMedia({
+    video: true,
+    audio: true
+  }, function (stream) { //OnSuccess
+    startUserMedia()
+  }, function (error) { //OnError
+    console.log('getUserMedia error! Got this error: ', error);
+  });
+} else {
+  startUserMedia()
+}
+
+function startUserMedia() {
+  navigator.getUserMedia({
+    video: false, // { 'facingMode': "user" }
+    audio: { 'echoCancellation': true, 'noiseSuppression': true }
+  }, function (stream) { //OnSuccess
+    webRTCConfig["stream"] = stream;
+    console.log('getUserMedia success! Stream: ', stream);
+
+    var audioTracks = stream.getAudioTracks();
+
+    if (audioTracks.length >= 1) {
+      allUserStreams[MY_UUID] = {
+        audiostream: stream,
+        username: MY_UUID
       }
-    })
-
-    socket.on("signaling", function (data) {
-      var signalingData = data.signalingData;
-      var fromUUID = data.fromUUID;
-      if (!pcs[fromUUID]) {
-        createRemoteSocket(false, fromUUID)
-      }
-      pcs[fromUUID].signaling(signalingData);
-
-      if (data.username) {
-        allUserStreams[fromUUID] = allUserStreams[fromUUID] ? allUserStreams[fromUUID] : {};
-        allUserStreams[fromUUID]["username"] = data.username;
-      }
-    })
-
-    socket.on("userJoined", function (content) {
-      var userUUID = content["UUID"] || null;
-      createRemoteSocket(true, userUUID)
-    })
-
-    socket.on("currentAudioLvl", function (content) {
-      var fromUUID = content["fromUUID"] || null;
-      let currentAudioLvl = content["currentAudioLvl"] || 0;
-      let perCent = currentAudioLvl * 50;
-      $("#" + fromUUID).find(".userPlaceholder").css({ "border": "2px solid rgb(255 255 255 / " + perCent + "%)" });
-    })
-
-
-
-    socket.on("userDiscconected", function (userUUID) {
-      delete allUserStreams[userUUID];
-      $('audio' + userUUID).remove();
-      updateUserLayout();
-    })
-
-    if (camOnAtStart) {
-      navigator.getUserMedia({
-        video: true,
-        audio: true
-      }, function (stream) { //OnSuccess
-        startUserMedia()
-      }, function (error) { //OnError
-        console.log('getUserMedia error! Got this error: ', error);
-      });
-    } else {
-      startUserMedia()
     }
 
-    function startUserMedia() {
-      navigator.getUserMedia({
-        video: false, // { 'facingMode': "user" }
-        audio: { 'echoCancellation': true, 'noiseSuppression': true }
-      }, function (stream) { //OnSuccess
-        webRTCConfig["stream"] = stream;
-        console.log('getUserMedia success! Stream: ', stream);
+    // if (audioTracks.length > 0) {
+    //   console.log('Using audio device: ' + audioTracks[0].label);
+    //   calcCurrentVolumeLevel(stream, function (currentAudioLvl) {
+    //     socket.emit('currentAudioLvl', currentAudioLvl);
+    //     var fromUUID = MY_UUID || null;
+    //     let perCent = currentAudioLvl * 50;
+    //     $("#" + fromUUID).find(".userPlaceholder").css({ "border": "2px solid rgb(255 255 255 / " + perCent + "%)" });
+    //   });
+    // }
 
-        var audioTracks = stream.getAudioTracks();
-
-        if (audioTracks.length >= 1) {
-          allUserStreams[MY_UUID] = {
-            audiostream: stream,
-            username: username
-          }
-        }
-
-        if (audioTracks.length > 0) {
-          console.log('Using audio device: ' + audioTracks[0].label);
-          calcCurrentVolumeLevel(stream, function (currentAudioLvl) {
-            socket.emit('currentAudioLvl', currentAudioLvl);
-            var fromUUID = MY_UUID || null;
-            let perCent = currentAudioLvl * 50;
-            $("#" + fromUUID).find(".userPlaceholder").css({ "border": "2px solid rgb(255 255 255 / " + perCent + "%)" });
-          });
-        }
-
-        joinRoom();
-        updateUserLayout();
-        if (camOnAtStart) { //enable cam on start if set
-          setTimeout(function () {
-            $("#addRemoveCameraBtn").click();
-          }, 1000)
-        }
-
-      }, function (error) { //OnError
-        alert("Could not get your Mic! You need at least one Mic!")
-        console.log('getUserMedia error! Got this error: ', error);
-      });
+    joinRoom();
+    function joinRoom() {
+      socket.emit("userJoined", {UUID : MY_UUID})
     }
-  })
-});
+
+    updateUserLayout();
+    if (camOnAtStart) { //enable cam on start if set
+      setTimeout(function () {
+        $("#addRemoveCameraBtn").click();
+      }, 1000)
+    }
+
+  }, function (error) { //OnError
+    alert("Could not get your Mic! You need at least one Mic!")
+    console.log('getUserMedia error! Got this error: ', error);
+  });
+}
 
 $(window).on("beforeunload", function () {
-  if (socketConnected) {
-    socket.emit('closeConnection', null);
-  }
+  socket.emit('closeConnection', null);
 })
 
 document.addEventListener('keydown', ev => {
@@ -245,7 +217,7 @@ $(document).ready(function () {
   function sendMsg() {
     console.log("send")
     let msg = $("#chatInputText").val().trim();
-    socket.emit('sendMsg', msg);
+    socket.emit('msg', msg);
     $("#chatInputText").val("")
   }
 
@@ -574,14 +546,6 @@ function updateUserLayout() {
     $(this).find("video").css({ "max-width": w + 'px', "max-height": h + 'px' })
     $(this).find("video")[0].play();
   })
-}
-
-function joinRoom() {
-  //Only join the room if local media is active!
-  var roomname = getUrlParam("roomname", "unknown");
-  socket.emit("joinRoom", { roomname: roomname, username: username }, function () {
-    console.log("joined room", roomname)
-  });
 }
 
 var resizeTimeout = null;
