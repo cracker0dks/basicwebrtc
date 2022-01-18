@@ -81,6 +81,10 @@ ioServer.sockets.on('connection', function (socket) {
         socket.to(roomOfUser).emit('userDiscconected', MY_UUID);
     });
 
+    socket.on('disconnect', function () {
+        socket.to(roomOfUser).emit('userDiscconected', MY_UUID);
+    });
+
     var roomname;
     var username = "";
     socket.on("joinRoom", function (content, callback) {
