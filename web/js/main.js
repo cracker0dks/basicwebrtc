@@ -306,9 +306,8 @@ $(document).ready(function () {
           if (videoTracks.length > 0) {
             console.log('Using video device: ' + videoTracks[0].label);
           }
-
-          updateUserLayout();
           screenActive = true;
+          updateUserLayout();
         }
 
       } catch (e) {
@@ -512,15 +511,35 @@ function updateUserLayout() {
         mirrorStyle = "transform: scaleX(-1);"
       }
       var userDisplayName = userStream["username"] && userStream["username"] != "NA" ? (userStream["username"].charAt(0).toUpperCase() + userStream["username"].slice(1)) : i.substr(0, 2).toUpperCase();
-      userDiv.append(
-        '<div class="userCont" style="position: absolute; width: 100%; height: 100%;">' +
-        '<div id="video' + i + '" style="top: 0px; width: 100%;">' +
-        '<div style="position: absolute; color: white; top: 7px; left: 7px; font-size: 1.3em; z-index:10; text-shadow: 1px 0 0 #000, 0 -1px 0 #000, 0 1px 0 #000, -1px 0 0 #000;">' + userDisplayName + '</div>' +
-        '<video style="' + mirrorStyle + '" autoplay muted></video>' +
-        '</div>' +
-        '</div>');
+      userDiv.append(`<div class="userCont" style="position: absolute; width: 100%; height: 100%;">
+          <div id="video${i}" style="top: 0px; width: 100%;">
+            <div style="position: absolute; color: white; top: 7px; left: 7px; font-size: 1.3em; z-index:10; text-shadow: 1px 0 0 #000, 0 -1px 0 #000, 0 1px 0 #000, -1px 0 0 #000;">
+              ${userDisplayName}
+            </div>
+            <video style="${mirrorStyle}" autoplay muted></video>
+            <button title="Enable Picture in Picture" style="cursor:pointer; position:absolute; top:5px; right:10px; background:transparent; border:0px;" class="pipBtn">
+              <img style="width: 30px;" src="./images/picInPic.png">
+            </button>
+          </div>
+        </div>`);
       userDiv.find("video")[0].srcObject = userStream["videostream"];
       userDiv.find(".userPlaceholderContainer").hide();
+
+      if(mirrorStyle != "" || !document.pictureInPictureEnabled) {
+        userDiv.find(".pipBtn").hide();
+      }
+
+      userDiv.find(".pipBtn").click(function () {
+        if (document.pictureInPictureElement) {
+          document.exitPictureInPicture();
+        } else {
+          if (document.pictureInPictureEnabled) {
+            userDiv.find("video")[0].requestPictureInPicture();
+          }
+        }
+      });
+
+      userDiv.on
 
       if (i != MY_UUID) {
         userDiv.find("video").css({ "cursor": "pointer" })
