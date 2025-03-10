@@ -117,8 +117,15 @@ socket.on("connect", function () {
     socket.on("currentAudioLvl", function (content) {
       var fromUUID = content["fromUUID"] || null;
       let currentAudioLvl = content["currentAudioLvl"] || 0;
-      let perCent = currentAudioLvl * 50;
-      $("#" + fromUUID).find(".userPlaceholder").css({ "border": "2px solid rgb(255 255 255 / " + perCent + "%)" });
+
+      $("#" + fromUUID).find(".audioMuted").remove();
+
+      if (currentAudioLvl < 0) { //Muted
+        $("#" + fromUUID).append('<div style="position:absolute; top: 0px; color: white; font-size: 1.7em; padding: 10px;" class="audioMuted"><i class="fas fa-microphone-alt-slash"></i></div>')
+      } else {
+        let perCent = currentAudioLvl * 50;
+        $("#" + fromUUID).find(".userPlaceholder").css({ "border": "2px solid rgb(255 255 255 / " + perCent + "%)" });
+      }
     })
 
 
@@ -162,10 +169,12 @@ socket.on("connect", function () {
         if (audioTracks.length > 0) {
           console.log('Using audio device: ' + audioTracks[0].label);
           calcCurrentVolumeLevel(stream, function (currentAudioLvl) {
-            socket.emit('currentAudioLvl', currentAudioLvl);
-            var fromUUID = MY_UUID || null;
-            let perCent = currentAudioLvl * 50;
-            $("#" + fromUUID).find(".userPlaceholder").css({ "border": "2px solid rgb(255 255 255 / " + perCent + "%)" });
+            if (!micMuted) {
+              socket.emit('currentAudioLvl', currentAudioLvl);
+              var fromUUID = MY_UUID || null;
+              let perCent = currentAudioLvl * 50;
+              $("#" + fromUUID).find(".userPlaceholder").css({ "border": "2px solid rgb(255 255 255 / " + perCent + "%)" });
+            }
           });
         }
 
@@ -207,6 +216,7 @@ $(document).ready(function () {
       $("#muteUnmuteMicBtn").html('<i class="fas fa-microphone-alt-slash"></i>');
       if (allUserStreams[MY_UUID] && allUserStreams[MY_UUID]["audiostream"]) {
         allUserStreams[MY_UUID]["audiostream"].getAudioTracks()[0].enabled = false;
+        socket.emit('currentAudioLvl', -1);
       }
     } else {
       $("#muteUnmuteMicBtn").html('<i class="fas fa-microphone-alt"></i>');
@@ -525,7 +535,7 @@ function updateUserLayout() {
       userDiv.find("video")[0].srcObject = userStream["videostream"];
       userDiv.find(".userPlaceholderContainer").hide();
 
-      if(mirrorStyle != "" || !document.pictureInPictureEnabled) {
+      if (mirrorStyle != "" || !document.pictureInPictureEnabled) {
         userDiv.find(".pipBtn").hide();
       }
 
