@@ -24,8 +24,7 @@ if (base64Domain && socketDomain) {
 
 var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 if (isMobile) { //No Screenshare on mobile devices
-  $("#screenBtnContainer").hide();
-  $("#mediaControll").css({ width: "270px" })
+  $("#addRemoveScreenBtn").hide();
 }
 
 const SocketIO_Options = { withCredentials: false }
