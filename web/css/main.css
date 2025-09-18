@@ -248,8 +248,14 @@ div#centerDiv{
   background: #474747;
 }
 
+:root {
+  --selfPreviewBottomOffset: 30px;
+}
 
 @media only screen and (max-width: 460px) {
+  :root {
+    --selfPreviewBottomOffset: 80px;
+  }
   #mediaControllContainer {
     height: unset;
     bottom: 10px;

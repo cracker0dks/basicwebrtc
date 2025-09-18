@@ -569,7 +569,7 @@ function updateUserLayout() {
   if (streamCnt == 2) { //Display 2 users side by side
     for (var i in allUserDivs) {
       if (i == MY_UUID) {
-        allUserDivs[i].css({ width: '20%', height: '30%', position: 'absolute', left: '20px', bottom: '30px', 'z-index': '1' });
+        allUserDivs[i].css({ width: '20%', height: '30%', position: 'absolute', left: '20px', bottom: 'var(--selfPreviewBottomOffset)', 'z-index': '1' });
       } else {
         allUserDivs[i].css({ width: '100%', height: '100%', float: 'left' });
       }
