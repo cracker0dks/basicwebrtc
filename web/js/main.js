@@ -503,15 +503,15 @@ function updateUserLayout() {
     // but if we should ever change this in the future,
     // then we should use innerText instead of innerHTML to prevent XSS attacks
     var uDisplay = userStream["username"] && userStream["username"] != "NA" ? userStream["username"].substr(0, 2).toUpperCase() : i.substr(0, 2).toUpperCase();
-    var userDiv = $('<div class="videoplaceholder" id="' + i + '">' +
-      '<div class="userPlaceholderContainer">' +
-      '<div class="userPlaceholder">' + uDisplay + '</div>' +
-      '</div>' +
-      '</div>')
+    var userDiv = $(`<div class="videoplaceholder" id="${i}">
+      <div class="userPlaceholderContainer">
+        <div class="userPlaceholder">${uDisplay}</div>
+      </div>
+    </div>`)
 
     if (userStream["audiostream"] && i !== MY_UUID) {
       if ($("#audioStreams").find('#audio' + i).length == 0) {
-        let audioDiv = $('<div id="audio' + i + '" style="display:none;"><audio autoplay></audio></div>');
+        let audioDiv = $(`<div id="audio${i}" style="display:none;"><audio autoplay></audio></div>`);
         audioDiv.find("audio")[0].srcObject = userStream["audiostream"];
         $("#audioStreams").append(audioDiv);
       }
