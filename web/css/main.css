@@ -34,13 +34,13 @@ video {
 
 .userPlaceholder {
   width: 150px;
-  height: 140px;
+  height: 150px;
+  line-height: 150px;
   border-radius: 50%;
   margin-left: auto;
   margin-right: auto;
   background: #8e8effa1;
-  font-size: 8em;
-  padding-top: 10px;
+  font-size: 7em;
   color: #1a1a1a;
   text-align: center;
   position: relative;
@@ -238,6 +238,7 @@ div#centerDiv{
 
 .videoplaceholder {
   position:relative;
+  min-width: 126px;
 }
 
 .videoplaceholder > .userPlaceholderContainer {
@@ -266,6 +267,19 @@ div#centerDiv{
     padding-left: 12px;
     padding-right: 12px;
     width: 45px;
+  }
+
+
+  .videoplaceholder {
+    min-width: 126px;
+  }
+
+  .selfPreview .userPlaceholder {
+    width: 120px;
+    height: 120px;
+    font-size: 5em;
+    line-height: 120px;
+    padding: 0;
   }
 }
 
