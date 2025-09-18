@@ -236,6 +236,19 @@ div#centerDiv{
   border-radius: 5px;
 }
 
+.videoplaceholder {
+  position:relative;
+}
+
+.videoplaceholder > .userPlaceholderContainer {
+  width:100%;
+  height:100%;
+  position:absolute;
+  overflow:hidden;
+  background: #474747;
+}
+
+
 @media only screen and (max-width: 460px) {
   #mediaControllContainer {
     height: unset;
@@ -249,3 +262,4 @@ div#centerDiv{
     width: 45px;
   }
 }
+
