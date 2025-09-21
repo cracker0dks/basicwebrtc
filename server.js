@@ -83,6 +83,8 @@ ioServer.sockets.on('connection', function (socket) {
 
     socket.on('disconnect', function () {
         socket.to(roomOfUser).emit('userDiscconected', MY_UUID);
+        delete registerdUUIDs[MY_UUID];
+        delete socketID_UUIDMatch[MY_UUID];
     });
 
     var roomname;
