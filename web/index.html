@@ -40,26 +40,13 @@
     <input id="chatInputText" placeholder="your msg..." type="text" width="100%" >
     <div id="chatSendBtn"><i class="fas fa-paper-plane"></i></div>
   </div>
-  <div style="position: fixed; bottom: 0px; height: 100px; width: 100%; text-align: center; font-size: 2.5em;" id="mediaControllContainer">
-    <div style="width: 460px; margin-left: auto; margin-right: auto; background: #ffffff3b; border-radius: 5px;" id="mediaControll">
-      <ul>
-        <li>
-          <div title="mute / unmute microphon!" id="muteUnmuteMicBtn" class="callBtn"><i class="fas fa-microphone-alt"></i></div>
-        </li>
-        <li>
-          <div title="cancel call!" id="cancelCallBtn" class="callBtn"><i class="fas fa-phone-slash"></i></div>
-        </li>
-        <li>
-          <div title="add / remove camera!" id="addRemoveCameraBtn" class="callBtn"><i class="fas fa-video"></i></div>
-        </li>
-        <li id="screenBtnContainer">
-          <div title="add / remove screen!" id="addRemoveScreenBtn" class="callBtn"><i class="fas fa-desktop"></i></div>
-        </li>
-        <li id="chatBtnContainer">
-          <div title="open / close Chat" id="addRemoveChatBtn" class="callBtn"><i class="far fa-comment-dots"></i></div>
-        </li>
-      </ul>
-
+  <div id="mediaControllContainer">
+    <div id="mediaControll">
+      <div title="mute / unmute microphon!" id="muteUnmuteMicBtn" class="callBtn"><i class="fas fa-microphone-alt"></i></div>
+      <div title="add / remove camera!" id="addRemoveCameraBtn" class="callBtn"><i class="fas fa-video"></i></div>
+      <div title="add / remove screen!" id="addRemoveScreenBtn" class="callBtn"><i class="fas fa-desktop"></i></div>
+      <div title="open / close Chat" id="addRemoveChatBtn" class="callBtn"><i class="far fa-comment-dots"></i></div>
+      <div title="cancel call!" id="cancelCallBtn" class="callBtn"><i class="fas fa-phone-slash"></i></div>
     </div>
   </div>
   <div id="audioStreams"></div>

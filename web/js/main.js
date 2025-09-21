@@ -24,8 +24,7 @@ if (base64Domain && socketDomain) {
 
 var isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 if (isMobile) { //No Screenshare on mobile devices
-  $("#screenBtnContainer").hide();
-  $("#mediaControll").css({ width: "270px" })
+  $("#addRemoveScreenBtn").hide();
 }
 
 const SocketIO_Options = { withCredentials: false }
@@ -500,16 +499,19 @@ function updateUserLayout() {
     var userStream = allUserStreams[i];
     streamCnt++;
 
+    // at the moment this is santized by only allowing 2 characters,
+    // but if we should ever change this in the future,
+    // then we should use innerText instead of innerHTML to prevent XSS attacks
     var uDisplay = userStream["username"] && userStream["username"] != "NA" ? userStream["username"].substr(0, 2).toUpperCase() : i.substr(0, 2).toUpperCase();
-    var userDiv = $('<div class="videoplaceholder" style="position:relative;" id="' + i + '">' +
-      '<div class="userPlaceholderContainer" style="width:100%; height:100%; position:absolute; overflow:hidden; background: #474747;">' +
-      '<div class="userPlaceholder">' + uDisplay + '</div>' +
-      '</div>' +
-      '</div>')
+    var userDiv = $(`<div class="videoplaceholder" id="${i}">
+      <div class="userPlaceholderContainer">
+        <div class="userPlaceholder">${uDisplay}</div>
+      </div>
+    </div>`)
 
     if (userStream["audiostream"] && i !== MY_UUID) {
       if ($("#audioStreams").find('#audio' + i).length == 0) {
-        let audioDiv = $('<div id="audio' + i + '" style="display:none;"><audio autoplay></audio></div>');
+        let audioDiv = $(`<div id="audio${i}" style="display:none;"><audio autoplay></audio></div>`);
         audioDiv.find("audio")[0].srcObject = userStream["audiostream"];
         $("#audioStreams").append(audioDiv);
       }
@@ -567,7 +569,8 @@ function updateUserLayout() {
   if (streamCnt == 2) { //Display 2 users side by side
     for (var i in allUserDivs) {
       if (i == MY_UUID) {
-        allUserDivs[i].css({ width: '20%', height: '30%', position: 'absolute', left: '20px', bottom: '30px', 'z-index': '1' });
+        allUserDivs[i].addClass("selfPreview")
+        .css({ width: '20%', height: '30%', position: 'absolute', left: '20px', bottom: 'var(--selfPreviewBottomOffset)', 'z-index': '1' });
       } else {
         allUserDivs[i].css({ width: '100%', height: '100%', float: 'left' });
       }
